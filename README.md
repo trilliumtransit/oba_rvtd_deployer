@@ -43,3 +43,38 @@ You will need to do the following for automatically launching Amazon EC2 instanc
 - (Windows only) instally PuTTY and PuTTYgen
  - [Download from here](http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html).
  - Create .ppk file [(see aws docs)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/putty.html).
+
+## Config Files
+
+You'll need to create a bunch of config files before running the deployment scripts.  Run the script `setup_config` to be prompted for each setting, or create a new folder called `config` and add the files manually.  All config files are .ini files and have a single section called 'DEFAULT'.
+
+### aws.ini
+
+| Setting Name | Description |
+| --- | --- |
+| ami_id | The base ami to start from.  Defaults to `ami-3689325f` (Amazon Linux). |
+| aws_access_key_id | Access key for account. |
+| aws_secret_access_key | Secret access key for account. |
+| key_filename | The filename of your .pem file. |
+| key_name | The name of the secret key for the EC2 instance to use. |
+| instance_name | The name to tag the instance with. |
+| instance_type | The EC2 instance type.  [(See instance types)](http://aws.amazon.com/ec2/pricing/). |
+| region | The AWS region to connect to. |
+| security_groups | Security groups to grant to the instance.  If more than one, seperate with commas. |
+| user | The user to login as when connecting via ssh. |
+
+### gtfs.ini
+
+| Setting Name | Description |
+| --- | --- |
+| gtfs_static_url | The url where the gtfs static file can be found. |
+| gtfs_rt_trip_updates_url | The url for the gtfs-rt trip updates. |
+| gtfs_rt_service_alerts_url | The url for the gtfs-rt service alerts. |
+| gtfs_rt_vehicle_positions_url | The url for the gtfs-rt vehicle positions. |
+
+### oba.ini
+
+| Setting Name | Description |
+| --- | --- |
+| pg_username | The username that OneBusAway will use when connecting to postgresql. |
+| pg_password | The password that OneBusAway will use when connecting to postgresql. |

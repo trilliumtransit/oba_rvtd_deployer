@@ -2,6 +2,12 @@
 
 Script(s) to deploy and manage OneBusAway on Amazon EC2 for Rogue Valley Transportation District (RVTD)
 
+## Table of Contents
+
+* [Installation](#installation)
+* [Running Scripts](#running-scripts)
+* [EC2 Setup](#ec2-setup)
+
 ## Installation
 
 The project is based of off python 2.7, but is best used with the `virtualenv` development scheme.
@@ -23,7 +29,7 @@ The project is based of off python 2.7, but is best used with the `virtualenv` d
 
 If using linux, the executable files to run scripts will be in the `bin` folder instead of `Scripts`.  In the remainder of the docs, whenever it says "run script `script_name`", you'll run the script by doing `bin/script_name` or `.\Scripts\script_name` on linux and windows respectively.
 
-## EC2 setup
+## EC2 Setup
 
 You will need to do the following for automatically launching Amazon EC2 instances using the scripts:
 

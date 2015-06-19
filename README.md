@@ -19,6 +19,10 @@ The project is based of off python 2.7, but is best used with the `virtualenv` d
 7. (Windows only) Manually install the `pycrypto` library.  The followin command assumes you have 32 bit python 2.7 installed: `pip install http://www.voidspace.org.uk/python/pycrypto-2.6.1/pycrypto-2.6.1-cp27-none-win32.whl`  If 64 bit python 2.7 is installed, run the following command instaed:  `pip install http://www.voidspace.org.uk/python/pycrypto-2.6.1/pycrypto-2.6.1-cp27-none-win_amd64.whl`
 8. Install the python project using develop mode: `python setup.py develop`
 
+## Running Scripts
+
+If using linux, the executable files to run scripts will be in the `bin` folder instead of `Scripts`.  In the remainder of the docs, whenever it says "run script `script_name`", you'll run the script by doing `bin/script_name` or `.\Scripts\script_name` on linux and windows respectively.
+
 ## EC2 setup
 
 You will need to do the following for automatically launching Amazon EC2 instances using the scripts:

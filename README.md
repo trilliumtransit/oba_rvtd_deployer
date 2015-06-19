@@ -11,6 +11,7 @@ Script(s) to deploy and manage OneBusAway on Amazon EC2 for Rogue Valley Transpo
     * [aws.ini](#awsini)
     * [gtfs.ini](#gtfsini)
     * [oba.ini](#obaini)
+* [PostgreSQL Setup](#ec2-postgresql-setup)
 
 ## Installation
 
@@ -80,5 +81,43 @@ You'll need to create a bunch of config files before running the deployment scri
 
 | Setting Name | Description |
 | --- | --- |
-| pg_username | The username that OneBusAway will use when connecting to postgresql. |
+| pg_username | The role that OneBusAway will use when connecting to postgresql. |
 | pg_password | The password that OneBusAway will use when connecting to postgresql. |
+
+## EC2 PostgreSQL Setup
+
+There is some manual setup required for setting up PostgreSQL.
+
+1.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change this line:
+    ```
+    local   all         all                                       ident
+    ```
+
+    to this:
+
+    ```
+    local   all         all                                       trust
+    ```
+
+2.  Start postgresql: `sudo service postgresql start`
+3.  Enter into the psql edit mode:  `psql -U postgres`
+3.  Create a login user for OneBusAway (replace username with your choice): `CREATE ROLE username1 PASSWORD 'password';`
+4.  Create a group role for that user (replace group role name with your choice): `CREATE ROLE groupname1;`
+5.  Grant group role to login user (replace names): `GRANT groupname1 TO username1;`
+6.  Create the databases (KEEP db names!): `CREATE DATABASE org_onebusaway_users ENCODING = 'UTF8';` `CREATE DATABASE org_onebusaway_database ENCODING = 'UTF8';`
+7.  Grant all on the databases to group role (replace group role name): `GRANT ALL ON DATABASE org_onebusaway_users TO groupname1;` `GRANT ALL ON DATABASE org_onebusaway_database TO groupname1;`
+8.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change these lines:
+    ```
+    local   all             all                                     trust
+    # IPv4 local connections:
+    host    all             all             127.0.0.1/32            ident
+    ```
+
+    to this:
+
+    ```
+    local   all             all                                     md5
+    # IPv4 local connections:
+    host    all             all             127.0.0.1/32            md5
+    ```
+9.  Restart postgresql: `sudo service postgresql restart`

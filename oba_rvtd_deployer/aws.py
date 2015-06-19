@@ -127,6 +127,7 @@ class AwsFab:
         self.install_git()
         self.install_maven()
         self.setup_pg()
+        self.install_tomcat()
     
     def install_git(self):
         '''Installs git.
@@ -167,6 +168,19 @@ class AwsFab:
         # manually edit pg_hba.conf
         print('Please ssh as root onto the machine and follow the instructions in the section "EC2 PostgreSQL Setup".')
         input('Press enter to continue...')
+        
+    def install_tomcat(self):
+        '''Configures Tomcat on EC2 instance.
+        '''
+        
+        # install it
+        sudo('yum -y install tomcat7 tomcat7-webapps tomcat7-docs-webapp tomcat7-admin-webapps')
+        
+        # start it
+        sudo('service tomcat7 start')
+        
+        # add to startup list
+        sudo('chkconfig --level 345 tomcat6 on')
         
 
 def tear_down(instance_id=None, conn=None):

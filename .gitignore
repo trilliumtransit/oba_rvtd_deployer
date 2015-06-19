@@ -65,3 +65,4 @@ target/
 
 #project-level-exclusions
 /config
+/data

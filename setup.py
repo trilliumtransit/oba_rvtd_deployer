@@ -6,7 +6,8 @@ setup(
     install_requires=[
         'requests>=2.5.3',
         'boto>=2.38',
-        'fabric>=1.10.1'
+        'fabric>=1.10.1',
+        'transitfeed>=1.2.14'
     ],
     entry_points={
         'console_scripts': [

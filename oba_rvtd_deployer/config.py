@@ -8,9 +8,7 @@ try:
 except NameError: 
     pass
 
-BASE_DIR = os.path.split(os.path.dirname(__file__))[0]
-CONFIG_TEMPLATE_DIR = os.path.join(BASE_DIR, 'config_templates')
-CONFIG_DIR = os.path.join(BASE_DIR, 'config')
+from oba_rvtd_deployer import CONFIG_DIR, CONFIG_TEMPLATE_DIR
 
 
 def clean():

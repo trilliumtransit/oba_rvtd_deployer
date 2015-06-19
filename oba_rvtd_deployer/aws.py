@@ -161,18 +161,12 @@ class AwsFab:
         # install it
         sudo('yum -y install postgresql postgresql-server')
         
-        # start server
+        # initialize db
         sudo('service postgresql initdb')
         
-        # add login role
-        
-        # add group role
-        
-        # assign login role to group role
-        
-        # create db
-        
-        # give group privileges to db
+        # manually edit pg_hba.conf
+        print('Please ssh as root onto the machine and follow the instructions in the section "EC2 PostgreSQL Setup".')
+        input('Press enter to continue...')
         
 
 def tear_down(instance_id=None, conn=None):

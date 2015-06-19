@@ -7,6 +7,10 @@ Script(s) to deploy and manage OneBusAway on Amazon EC2 for Rogue Valley Transpo
 * [Installation](#installation)
 * [Running Scripts](#running-scripts)
 * [EC2 Setup](#ec2-setup)
+* [Config Files](#config-files)
+    * [aws.ini](#awsini)
+    * [gtfs.ini](#gtfsini)
+    * [oba.ini](#obaini)
 
 ## Installation
 

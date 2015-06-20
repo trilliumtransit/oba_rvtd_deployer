@@ -2,13 +2,17 @@ try:
     input = raw_input
 except NameError: 
     pass
+import os
+import sys
 import time
 
 import boto.ec2
 from fabric.api import env, run, sudo, cd
 from fabric.exceptions import NetworkError
 
+from oba_rvtd_deployer import REPORTS_DIR
 from oba_rvtd_deployer.config import get_aws_config
+from oba_rvtd_deployer.util import FabLogger
 
 
 def get_aws_connection():
@@ -74,7 +78,7 @@ def launch_new():
         retry = True
         while retry:
             try:
-                # SSH into the box here. I personally use fabric
+                # SSH into the box here.
                 aws_system.test_cmd()
                 retry = False
             except NetworkError as e:
@@ -112,7 +116,7 @@ class AwsFab:
         
         env.host_string = '{0}@{1}'.format(user, host_name)
         env.key_filename = [key_filename]
-        print(key_filename)
+        sys.stdout = FabLogger(os.path.join(REPORTS_DIR, 'aws_fab.log'))
         
     def test_cmd(self):
         '''A test command to see if everything is running ok.
@@ -125,6 +129,7 @@ class AwsFab:
         '''
         
         self.install_git()
+        self.install_jdk()
         self.install_maven()
         self.setup_pg()
         self.install_tomcat()
@@ -134,6 +139,12 @@ class AwsFab:
         '''
         
         sudo('yum -y install git')
+        
+    def install_jdk(self):
+        '''Installs jdk devel, so maven is happy.
+        '''
+        
+        sudo('yum -y install java-1.7.0-openjdk-devel')
         
     def install_maven(self):
         '''Downloads and installs maven.
@@ -145,15 +156,9 @@ class AwsFab:
         run('rm apache-maven-3.3.3-bin.tar.gz')
         with cd('/usr/local'):
             sudo('ln -s apache-maven-3.3.3 maven')
-            
-        # add maven to path
-        run('export M2_HOME=/usr/local/maven')
-        run('export M2=$M2_HOME/bin')
-        run('export PATH=$M2:$PATH')
-        run('source ~/.bashrc')
         
         # check that mvn command works
-        run('mvn -version')
+        run('/usr/local/maven/bin/mvn -version')
         
     def install_pg(self):
         '''Configures PostgreSQL for immediate use by OneBusAway.

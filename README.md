@@ -57,7 +57,7 @@ You'll need to create a bunch of config files before running the deployment scri
 
 | Setting Name | Description |
 | --- | --- |
-| ami_id | The base ami to start from.  Defaults to `ami-3689325f` (Amazon Linux). |
+| ami_id | The base ami to start from.  Defaults to `ami-c7d092f7` (Centos 7). |
 | aws_access_key_id | Access key for account. |
 | aws_secret_access_key | Secret access key for account. |
 | key_filename | The filename of your .pem file. |
@@ -66,7 +66,7 @@ You'll need to create a bunch of config files before running the deployment scri
 | instance_type | The EC2 instance type.  [(See instance types)](http://aws.amazon.com/ec2/pricing/). |
 | region | The AWS region to connect to. |
 | security_groups | Security groups to grant to the instance.  If more than one, seperate with commas. |
-| user | The user to login as when connecting via ssh. |
+| user | The user to login as when connecting via ssh.  Defaults to `centos`. |
 
 ### gtfs.ini
 
@@ -89,7 +89,7 @@ You'll need to create a bunch of config files before running the deployment scri
 There is some manual setup required for setting up PostgreSQL.
 
 0.  Change to root user:  `sudo su`.
-1.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change this line:
+1.  Edit the file `/var/lib/pgsql/data/pg_hba.conf`.  Change this line:
     ```
     local   all         all                                       peer
     ```
@@ -107,7 +107,7 @@ There is some manual setup required for setting up PostgreSQL.
 5.  Grant group role to login user (replace names): `GRANT groupname1 TO username1;`
 6.  Create the databases (KEEP db names!): `CREATE DATABASE org_onebusaway_users ENCODING = 'UTF8';` `CREATE DATABASE org_onebusaway_database ENCODING = 'UTF8';`
 7.  Grant all on the databases to group role (replace group role name): `GRANT ALL ON DATABASE org_onebusaway_users TO groupname1;` `GRANT ALL ON DATABASE org_onebusaway_database TO groupname1;`
-8.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change these lines:
+8.  Edit the file `/var/lib/pgsql/data/pg_hba.conf`.  Change these lines:
     ```
     local   all             all                                     trust
     # IPv4 local connections:

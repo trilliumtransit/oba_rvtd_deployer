@@ -88,9 +88,10 @@ You'll need to create a bunch of config files before running the deployment scri
 
 There is some manual setup required for setting up PostgreSQL.
 
+0.  Change to root user:  `sudo su`.
 1.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change this line:
     ```
-    local   all         all                                       ident
+    local   all         all                                       peer
     ```
 
     to this:

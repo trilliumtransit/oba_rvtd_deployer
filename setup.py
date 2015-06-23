@@ -25,12 +25,13 @@ setup(
             
             # oba/gtfs activation
             'validate_gtfs=oba_rvtd_deployer.gtfs:validate_gtfs',
-            'update_gtfs=oba_rvtd_deploy.gtfs:update',
-            'start_oba=oba_rvtd_deploy.oba:start',
-            'stop_oba=oba_rvtd_deploy.oba:stop'
+            'update_gtfs=oba_rvtd_deployer.gtfs:update',
+            'deploy_oba=oba_rvtd_deployer.oba:deploy',
+            'start_oba=oba_rvtd_deployer.oba:start',
+            'stop_oba=oba_rvtd_deployer.oba:stop',
             
             # one command new deployment
-            'deploy_master=oba_rvtd_deploy:run_all'
+            'deploy_master=oba_rvtd_deployer.master:run_all'
         ]
     }
 )

@@ -6,7 +6,7 @@ import os
 import sys
 import time
 
-from fabric.api import env, run, put, cd
+from fabric.api import env, run, put, cd, sudo
 from fabric.exceptions import NetworkError
 
 from oba_rvtd_deployer import CONFIG_TEMPLATE_DIR, CONFIG_DIR, REPORTS_DIR
@@ -37,8 +37,6 @@ class ObaRvtdFab:
         max_retries = 4
         num_retries = 0
     
-        putty_tried = False
-        
         retry = True
         while retry:
             try:
@@ -46,19 +44,11 @@ class ObaRvtdFab:
                 self.test_cmd()
                 retry = False
             except NetworkError as e:
-                if 'timeout' not in str(e) and not putty_tried:
-                    print('The ec2 instance may not work with a windows machine yet.')
-                    print('Connecting manually with Putty may resolve this.')
-                    print('Please try connecting to the server with Putty, then the rest of this script may work.')
-                    input('Press Enter after you have connected using Putty...')
-                    putty_tried = True
-                    continue
-                else:
-                    print(e)
+                print(e)
                 if num_retries > max_retries:
                     raise Exception('Maximum Number of SSH Retries Hit.  Did EC2 instance get configured with ssh correctly?')
                 num_retries += 1 
-                print('SSH failed, waiting 10 seconds...')
+                print('SSH failed (the system may still be starting up), waiting 10 seconds...')
                 time.sleep(10)
         
     def test_cmd(self):
@@ -81,6 +71,9 @@ class ObaRvtdFab:
         # clone the repo
         run('git clone {0}'.format(self.oba_conf.get('DEFAULT', 'oba_git_repo')))
         
+        with cd(self.oba_base_folder):
+            run('/usr/local/maven/bin/mvn clean install')
+        
     def build_webapp(self, data_dict, config_template_file, webapp):
         '''Build a webapp using maven.
         
@@ -95,12 +88,15 @@ class ObaRvtdFab:
         with open(os.path.join(CONFIG_TEMPLATE_DIR, config_template_file)) as f:
             data_sources_template = f.read()
             
+        # write a new data sources file
         with open(temp_data_sources_filename, 'w') as f:
             f.write(data_sources_template.format(**data_dict))
             
+        # upload the data sources file to the project
         put(temp_data_sources_filename, 
             unix_path_join(self.oba_base_folder, webapp))
         
+        # build the project using maven
         with cd(self.oba_base_folder):
             run('/usr/local/maven/bin/mvn -am -pl {0} package'.format(webapp))
         
@@ -127,7 +123,10 @@ class ObaRvtdFab:
         
         transit_fed_config = dict(pg_username=self.oba_conf.get('DEFAULT', 'pg_username'),
                                   pg_password=self.oba_conf.get('DEFAULT', 'pg_password'),
-                                  data_bundle_path='data/bundle',
+                                  data_bundle_path=unix_path_join('/home',
+                                                                  self.aws_conf.get('DEFAULT', 'user'),
+                                                                  'data',
+                                                                  'bundle'),
                                   gtfs_rt_trip_updates_url=self.gtfs_conf.get('DEFAULT', 'gtfs_rt_trip_updates_url'),
                                   gtfs_rt_vehicle_positions_url=self.gtfs_conf.get('DEFAULT', 'gtfs_rt_vehicle_positions_url'),
                                   gtfs_rt_service_alerts_url=self.gtfs_conf.get('DEFAULT', 'gtfs_rt_service_alerts_url'))
@@ -146,25 +145,76 @@ class ObaRvtdFab:
         self.build_webapp(webapp_config, 
                           'webapp-data-sources.xml',
                           'onebusaway-webapp')
+        
+    def deploy_all(self):
+        
+        # copy the war files to tomcat for each webapp
+        tomcat_webapp_dir = unix_path_join('/var',
+                                           'lib',
+                                           'tomcat7',
+                                           'webapps')
+        for webapp in ['onebusaway-transit-data-federation-webapp',
+                       'onebusaway-api-webapp',
+                       'onebusaway-webapp']:
+            sudo('cp {0} {1}'.format(unix_path_join('/home',
+                                                    self.aws_conf.get('DEFAULT', 'user'),
+                                                    self.oba_base_folder,
+                                                    webapp,
+                                                    'target',
+                                                    webapp + '.war'),
+                                     tomcat_webapp_dir))
                         
 
 def install(instance_dns_name=None):
     '''Installs OBA on the EC2 instance.
+    
+    Args:
+        instance_dns_name (string, default=None): The EC2 instance to deploy to.
     '''
+    
     if not instance_dns_name:
         instance_dns_name = input('Enter EC2 public dns name: ')
         
     oba_fab = ObaRvtdFab(instance_dns_name)
     oba_fab.install_all()
+    
+    
+def deploy(instance_dns_name=None):
+    '''Deploys the webapps to Tomcat.
+    
+    Args:
+        instance_dns_name (string, default=None): The EC2 instance to deploy to.
+    '''
+    
+    if not instance_dns_name:
+        instance_dns_name = input('Enter EC2 public dns name: ')
+        
+    oba_fab = ObaRvtdFab(instance_dns_name)
+    oba_fab.deploy_all()
             
     
-def start():
+def start(instance_dns_name=None):
     '''Start the OBA server on the EC2 instance.
+    
+    Args:
+        instance_dns_name (string, default=None): The EC2 instance to deploy to.
     '''
     pass
 
 
-def stop():
+def stop(instance_dns_name=None):
     '''Stop the OBA server on the EC2 instance.
+    
+    Args:
+        instance_dns_name (string, default=None): The EC2 instance to deploy to.
+    '''
+    pass
+
+
+def copy_gwt(instance_dns_name=None):
+    '''Copy GWT files on OBA server on the EC2 instance.
+    
+    Args:
+        instance_dns_name (string, default=None): The EC2 instance to deploy to.
     '''
     pass

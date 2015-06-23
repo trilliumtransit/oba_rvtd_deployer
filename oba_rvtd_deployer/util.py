@@ -20,5 +20,5 @@ class FabLogger():
         self.log.write(message)
         
 
-def unix_path_join(dir1, dir2):
-    return '{0}/{1}'.format(dir1, dir2)
+def unix_path_join(*args):
+    return '/'.join(args)

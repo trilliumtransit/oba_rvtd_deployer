@@ -72,7 +72,6 @@ def launch_new():
     aws_system = AwsFab(instance.public_dns_name,
                         aws_conf.get('DEFAULT', 'user'),
                         aws_conf.get('DEFAULT', 'key_filename'))
-    putty_tried = False
     
     if status == "running":
         retry = True
@@ -82,25 +81,20 @@ def launch_new():
                 aws_system.test_cmd()
                 retry = False
             except NetworkError as e:
-                if 'timeout' not in str(e) and not putty_tried:
-                    print('The ec2 instance may not work with a windows machine yet.')
-                    print('Connecting manually with Putty may resolve this.')
-                    print('Please try connecting to the server with Putty, then the rest of this script may work.')
-                    input('Press Enter after you have connected using Putty...')
-                    putty_tried = True
-                    continue
-                else:
-                    print(e)
+                print(e)
                 if num_retries > max_retries:
                     tear_down(instance.id, conn)
                     raise Exception('Maximum Number of SSH Retries Hit.  Did EC2 instance get configured with ssh correctly?')
                 num_retries += 1 
-                print('SSH failed, waiting 10 seconds...')
+                print('SSH failed (the system may still be starting up), waiting 10 seconds...')
                 time.sleep(10)
     
     # If we've reached this point, the instance is up and running.
-    print('SSH passed')
-    aws_system.install_all()
+    print('SSH working')
+    #aws_system.update_system()
+    #aws_system.install_all()
+    
+    return instance
 
 
 class AwsFab:
@@ -122,7 +116,13 @@ class AwsFab:
         '''A test command to see if everything is running ok.
         '''
         
-        run('uname')    
+        run('uname')
+        
+    def update_system(self):
+        '''Updates the instance with the latest patches and upgrades.
+        '''
+        
+        sudo('yum -y update')
     
     def install_all(self):
         '''Method to install all stuff on machine (except OneBusAway).
@@ -131,7 +131,7 @@ class AwsFab:
         self.install_git()
         self.install_jdk()
         self.install_maven()
-        self.setup_pg()
+        #self.install_pg()
         self.install_tomcat()
     
     def install_git(self):
@@ -178,14 +178,21 @@ class AwsFab:
         '''Configures Tomcat on EC2 instance.
         '''
         
-        # install it
-        sudo('yum -y install tomcat7 tomcat7-webapps tomcat7-docs-webapp tomcat7-admin-webapps')
+        # install just tomcat
+        sudo('yum -y install tomcat7')
         
         # start it
         sudo('service tomcat7 start')
         
+        # install the other webapps
+        sudo('yum -y install tomcat7-webapps tomcat7-docs-webapp tomcat7-admin-webapps')
+        
         # add to startup list
-        sudo('chkconfig --level 345 tomcat6 on')
+        sudo('chkconfig --level 345 tomcat7 on')
+        
+        # allow copying of files to tomcat webapps
+        with cd('/usr/share/tomcat7'):
+            sudo('chmod 766 webapps')
         
 
 def tear_down(instance_id=None, conn=None):

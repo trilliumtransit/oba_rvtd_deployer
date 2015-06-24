@@ -79,6 +79,10 @@ You'll need to create a bunch of config files before running the deployment scri
 
 | Setting Name | Description |
 | --- | --- |
+| allow_api_test_key | Whether or not to set a test key for the api-webapp.  Set to `true` if desired. |
+| oba_base_folder | OneBusAway based folder.  Defaults to `onebusaway-application-modules-rvtd`. |
+| oba_git_branch | OneBusAway git branch to checkout.  Defaults to `rvtd-1.1.13.install`. |
+| oba_git_repo | OneBusAway git repo to checkout from.  Defaults to `https://github.com/trilliumtransit/onebusaway-application-modules-rvtd.git`. |
 | pg_username | The role that OneBusAway will use when connecting to postgresql. |
 | pg_password | The password that OneBusAway will use when connecting to postgresql. |
 

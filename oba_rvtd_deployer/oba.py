@@ -22,6 +22,7 @@ class ObaRvtdFab:
     gtfs_conf = get_gtfs_config()
     oba_conf = get_oba_config()
     oba_base_folder = oba_conf.get('DEFAULT', 'oba_base_folder')
+    user = aws_conf.get('DEFAULT', 'user')
         
     def __init__(self, host_name):
         '''Constructor for Class.  Sets up fabric environment.
@@ -30,11 +31,11 @@ class ObaRvtdFab:
             host_name (string): ec2 public dns name
         '''
         
-        env.host_string = '{0}@{1}'.format(self.aws_conf.get('DEFAULT', 'user'), host_name)
+        env.host_string = '{0}@{1}'.format(self.user, host_name)
         env.key_filename = [self.aws_conf.get('DEFAULT', 'key_filename')]
         sys.stdout = FabLogger(os.path.join(REPORTS_DIR, 'oba_fab.log'))
         
-        max_retries = 4
+        max_retries = 6
         num_retries = 0
     
         retry = True
@@ -72,6 +73,7 @@ class ObaRvtdFab:
         run('git clone {0}'.format(self.oba_conf.get('DEFAULT', 'oba_git_repo')))
         
         with cd(self.oba_base_folder):
+            run('git checkout {0}'.format(self.oba_conf.get('DEFAULT', 'oba_git_branch')))
             run('/usr/local/maven/bin/mvn clean install')
         
     def build_webapp(self, data_dict, config_template_file, webapp):
@@ -94,7 +96,11 @@ class ObaRvtdFab:
             
         # upload the data sources file to the project
         put(temp_data_sources_filename, 
-            unix_path_join(self.oba_base_folder, webapp))
+            unix_path_join(self.oba_base_folder,
+                           webapp,
+                           'src',
+                           'main',
+                           'resources'))
         
         # build the project using maven
         with cd(self.oba_base_folder):
@@ -124,7 +130,7 @@ class ObaRvtdFab:
         transit_fed_config = dict(pg_username=self.oba_conf.get('DEFAULT', 'pg_username'),
                                   pg_password=self.oba_conf.get('DEFAULT', 'pg_password'),
                                   data_bundle_path=unix_path_join('/home',
-                                                                  self.aws_conf.get('DEFAULT', 'user'),
+                                                                  self.user,
                                                                   'data',
                                                                   'bundle'),
                                   gtfs_rt_trip_updates_url=self.gtfs_conf.get('DEFAULT', 'gtfs_rt_trip_updates_url'),
@@ -147,23 +153,40 @@ class ObaRvtdFab:
                           'onebusaway-webapp')
         
     def deploy_all(self):
+        '''Deploys each webapp (copies to tomcat webapps).
+        '''
         
         # copy the war files to tomcat for each webapp
-        tomcat_webapp_dir = unix_path_join('/var',
-                                           'lib',
-                                           'tomcat7',
+        tomcat_webapp_dir = unix_path_join('/usr',
+                                           'local',
+                                           'tomcat',
                                            'webapps')
         for webapp in ['onebusaway-transit-data-federation-webapp',
                        'onebusaway-api-webapp',
                        'onebusaway-webapp']:
             sudo('cp {0} {1}'.format(unix_path_join('/home',
-                                                    self.aws_conf.get('DEFAULT', 'user'),
+                                                    self.user,
                                                     self.oba_base_folder,
                                                     webapp,
                                                     'target',
                                                     webapp + '.war'),
                                      tomcat_webapp_dir))
-                        
+            
+    def start_servers(self):
+        '''Starts tomcat and xwiki servers.
+        '''
+        
+        sudo('set -m; /usr/local/tomcat/bin/startup.sh')
+        # writing output to /dev/null because logs are already written to /usr/local/xwiki/data/logs
+        sudo('set -m; nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &')
+        
+    def stop_servers(self):
+        '''Stops tomcat and xwiki servers.
+        '''
+        
+        sudo('set -m; /usr/local/tomcat/bin/shutdown.sh')
+        sudo('set -m; /usr/local/xwiki/stop_xwiki.sh -p 8081')
+        
 
 def install(instance_dns_name=None):
     '''Installs OBA on the EC2 instance.
@@ -199,7 +222,12 @@ def start(instance_dns_name=None):
     Args:
         instance_dns_name (string, default=None): The EC2 instance to deploy to.
     '''
-    pass
+    
+    if not instance_dns_name:
+        instance_dns_name = input('Enter EC2 public dns name: ')
+        
+    oba_fab = ObaRvtdFab(instance_dns_name)
+    oba_fab.start_servers()
 
 
 def stop(instance_dns_name=None):
@@ -208,7 +236,12 @@ def stop(instance_dns_name=None):
     Args:
         instance_dns_name (string, default=None): The EC2 instance to deploy to.
     '''
-    pass
+    
+    if not instance_dns_name:
+        instance_dns_name = input('Enter EC2 public dns name: ')
+        
+    oba_fab = ObaRvtdFab(instance_dns_name)
+    oba_fab.stop_servers()
 
 
 def copy_gwt(instance_dns_name=None):

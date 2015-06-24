@@ -1,6 +1,6 @@
 import sys
 
-from oba_rvtd_deployer.aws import launch_new
+from oba_rvtd_deployer.aws import launch_new, tear_down
 from oba_rvtd_deployer.gtfs import validate_gtfs, update
 from oba_rvtd_deployer.oba import install, deploy, start, copy_gwt
 
@@ -17,17 +17,19 @@ def run_all():
     # setup new EC2 instance
     instance = launch_new()
     
+    public_dns_name = instance.public_dns_name
+    
     # install OBA
-    install(instance.public_dns_name)
+    install(public_dns_name)
     
     # update GTFS, make new bundle
-    update(instance.public_dns_name)
+    update(public_dns_name)
 
     # deploy webapps to tomcat
-    deploy(instance.public_dns_name)
+    deploy(public_dns_name)
     
     # start server
-    start(instance.public_dns_name)
+    start(public_dns_name)
 
     # move GWT files to production webapp dir
-    copy_gwt(instance.public_dns_name)
+    copy_gwt(public_dns_name)

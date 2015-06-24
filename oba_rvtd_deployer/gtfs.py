@@ -33,6 +33,7 @@ class GtfsFab:
     gtfs_conf = get_gtfs_config()
     oba_conf = get_oba_config()
     oba_base_folder = oba_conf.get('DEFAULT', 'oba_base_folder')
+    user = aws_conf.get('DEFAULT', 'user')
         
     def __init__(self, host_name):
         '''Constructor for Class.  Sets up fabric environment.
@@ -41,11 +42,11 @@ class GtfsFab:
             host_name (string): ec2 public dns name
         '''
         
-        env.host_string = '{0}@{1}'.format(self.aws_conf.get('DEFAULT', 'user'), host_name)
+        env.host_string = '{0}@{1}'.format(self.user, host_name)
         env.key_filename = [self.aws_conf.get('DEFAULT', 'key_filename')]
         sys.stdout = FabLogger(os.path.join(REPORTS_DIR, 'gtfs_fab.log'))
         
-        max_retries = 4
+        max_retries = 6
         num_retries = 0
     
         retry = True
@@ -72,7 +73,7 @@ class GtfsFab:
         '''
         
         data_dir = unix_path_join('/home', 
-                                  self.aws_conf.get('DEFAULT', 'user'),
+                                  self.user,
                                   'data')
         remote_gtfs_file = unix_path_join(data_dir, gtfs_file_name_raw)
         bundle_dir = unix_path_join(data_dir, 'bundle')

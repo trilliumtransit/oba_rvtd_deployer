@@ -46,7 +46,7 @@ def launch_new():
     instance = reservation.instances[0]
     
     # Check if it's up and running a specified maximum number of times
-    max_retries = 3
+    max_retries = 6
     num_retries = 0
     
     # Check up on its status every so often
@@ -91,8 +91,10 @@ def launch_new():
     
     # If we've reached this point, the instance is up and running.
     print('SSH working')
-    #aws_system.update_system()
-    #aws_system.install_all()
+    aws_system.turn_off_ipv6()
+    aws_system.install_pg()
+    aws_system.update_system()
+    aws_system.install_all()
     
     return instance
 
@@ -123,16 +125,44 @@ class AwsFab:
         '''
         
         sudo('yum -y update')
-    
-    def install_all(self):
-        '''Method to install all stuff on machine (except OneBusAway).
+        
+    def turn_off_ipv6(self):
+        '''Edits the networking settings to turn off ipv6.
+        
+        Credit to CDSU user on http://blog.acsystem.sk/linux/rhel-6-centos-6-disabling-ipv6-in-system
         '''
         
+        # unfortunately, this requires sudo access
+        print('Please ssh as root onto the machine and follow the instructions in the section "Disabling IPv6".')
+        input('Press enter to continue...')
+        # run('sudo su')
+        # run('echo "net.ipv6.conf.default.disable_ipv6=1" >> /etc/sysctl.conf')
+        # run('echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf')
+        # run('sysctl -p')
+        # run('exit')
+    
+    def install_all(self, exclude_pg=True):
+        '''Method to install all stuff on machine (except OneBusAway).
+        
+        Args:
+            exclude_pg (bool, default=True): skips installation of pg.  Typically this is done right after instance startup.
+        '''
+        
+        # self.install_helpers()
+        if not exclude_pg:
+            self.install_pg()
         self.install_git()
         self.install_jdk()
         self.install_maven()
-        #self.install_pg()
         self.install_tomcat()
+        self.install_xwiki()
+        
+    def install_helpers(self):
+        '''Installs various utilities (typically not included with CentOS).
+        '''
+        
+        sudo('yum -y install wget')
+        sudo('yum -y install unzip')
     
     def install_git(self):
         '''Installs git.
@@ -144,7 +174,7 @@ class AwsFab:
         '''Installs jdk devel, so maven is happy.
         '''
         
-        sudo('yum -y install java-1.7.0-openjdk-devel')
+        sudo('yum -y install java-1.7.0-openjdk java-1.7.0-openjdk-devel')
         
     def install_maven(self):
         '''Downloads and installs maven.
@@ -178,25 +208,33 @@ class AwsFab:
         '''Configures Tomcat on EC2 instance.
         '''
         
-        # install just tomcat
-        sudo('yum -y install tomcat7')
+        # get tomcat from direct download
+        sudo('wget http://mirrors.sonic.net/apache/tomcat/tomcat-7/v7.0.62/bin/apache-tomcat-7.0.62.tar.gz')
         
-        # start it
-        sudo('service tomcat7 start')
-        
-        # install the other webapps
-        sudo('yum -y install tomcat7-webapps tomcat7-docs-webapp tomcat7-admin-webapps')
-        
-        # add to startup list
-        sudo('chkconfig --level 345 tomcat7 on')
-        
-        # allow copying of files to tomcat webapps
-        with cd('/usr/share/tomcat7'):
+        # move to a local area for better organization
+        sudo('sudo tar xzf apache-tomcat-7.0.62.tar.gz -C /usr/local')
+        run('rm -rf apache-tomcat-7.0.62.tar.gz')
+        with cd('/usr/local'):
+            sudo('ln -s apache-tomcat-7.0.62 tomcat')
+            
+        # allow copying of files to webapp dir
+        with cd('/usr/local/tomcat'):
             sudo('chmod 766 webapps')
+            
+    def install_xwiki(self):
+        
+        run('wget http://download.forge.ow2.org/xwiki/xwiki-enterprise-jetty-hsqldb-7.1.1.zip')
+        
+        # move to a local area for better organization
+        sudo('unzip xwiki-enterprise-jetty-hsqldb-7.1.1.zip -d /usr/local')
+        run('rm xwiki-enterprise-jetty-hsqldb-7.1.1.zip')
+        
+        with cd('/usr/local'):
+            sudo('ln -s xwiki-enterprise-jetty-hsqldb-7.1.1 xwiki')
         
 
 def tear_down(instance_id=None, conn=None):
-    '''Terminates a EC2 instance.
+    '''Terminates a EC2 instance and deletes all associated volumes.
     
     Args:
         instance_id (string): The ec2 instance id to terminate.
@@ -209,5 +247,26 @@ def tear_down(instance_id=None, conn=None):
     if not conn:
         conn = get_aws_connection()
         
+    volumes = conn.get_all_volumes(filters={'attachment.instance-id': [instance_id]})
+        
     print('Terminating instance')
     conn.terminate_instances([instance_id])
+    
+    aws_conf = get_aws_config()
+    if aws_conf.get('DEFAULT', 'delete_volumes_on_tear_down') == 'true':
+            
+        max_wait_retries = 12
+        
+        print('Deleting volume(s) associated with instance')
+        for volume in volumes:
+            volume_deleted = False
+            num_retries = 0
+            while not volume_deleted:
+                try:
+                    conn.delete_volume(volume.id)
+                    volume_deleted = True
+                except Exception as e:
+                    if num_retries >= max_wait_retries:
+                        raise e
+                    print('Waiting for volume to become detached from instance.  Waiting 10 seconds...')
+                    time.sleep(10)

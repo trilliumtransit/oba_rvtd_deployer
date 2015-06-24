@@ -31,6 +31,22 @@ xsi:schemaLocation="
 <!-- Service that is used to verify API keys -->
 <bean id="apiKeyValidationService" class="org.onebusaway.users.impl.validation.KeyValidationServiceImpl" />
 
+<bean class="org.onebusaway.users.impl.CreateApiKeyAction">
+ 	<property name="key" value="v1_BktoDJ2gJlu6nLM6LsT9H8IUbWc=cGF1bGN3YXR0c0BnbWFpbC5jb20="/>
+</bean>
+
+<bean class="org.onebusaway.users.impl.CreateApiKeyAction">
+ 	<property name="key" value="org.onebusaway.iphone"/>
+</bean>
+
+<bean class="org.onebusaway.users.impl.CreateApiKeyAction">
+ 	<property name="key" value="v1_C5+aiesgg8DxpmG1yS2F/pj2zHk=c3BoZW5yeUBnbWFpbC5jb20=="/>
+</bean>
+
+<bean class="org.onebusaway.users.impl.CreateApiKeyAction">
+ 	<property name="key" value="693c0a55-9ef0-4302-8bc3-f9b2db93e124"/>
+</bean>
+
 {api_testing}
 
 <!-- Tells ehCache to use a different name for the cache (to avoid conflicting with other onebusaway webapps)  -->

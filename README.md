@@ -5,12 +5,13 @@ Script(s) to deploy and manage OneBusAway on Amazon EC2 for Rogue Valley Transpo
 ## Table of Contents
 
 * [Installation](#installation)
-* [Running Scripts](#running-scripts)
 * [EC2 Setup](#ec2-setup)
 * [Config Files](#config-files)
     * [aws.ini](#awsini)
     * [gtfs.ini](#gtfsini)
     * [oba.ini](#obaini)
+* [Running Scripts](#running-scripts)
+* [Disabling IPv6](#disabling-ipv6)
 * [PostgreSQL Setup](#ec2-postgresql-setup)
 
 ## Installation
@@ -29,10 +30,6 @@ The project is based of off python 2.7, but is best used with the `virtualenv` d
   - Linux: `bin/activate`
 7. (Windows only) Manually install the `pycrypto` library.  The followin command assumes you have 32 bit python 2.7 installed: `pip install http://www.voidspace.org.uk/python/pycrypto-2.6.1/pycrypto-2.6.1-cp27-none-win32.whl`  If 64 bit python 2.7 is installed, run the following command instaed:  `pip install http://www.voidspace.org.uk/python/pycrypto-2.6.1/pycrypto-2.6.1-cp27-none-win_amd64.whl`
 8. Install the python project using develop mode: `python setup.py develop`
-
-## Running Scripts
-
-If using linux, the executable files to run scripts will be in the `bin` folder instead of `Scripts`.  In the remainder of the docs, whenever it says "run script `script_name`", you'll run the script by doing `bin/script_name` or `.\Scripts\script_name` on linux and windows respectively.
 
 ## EC2 Setup
 
@@ -57,16 +54,17 @@ You'll need to create a bunch of config files before running the deployment scri
 
 | Setting Name | Description |
 | --- | --- |
-| ami_id | The base ami to start from.  Defaults to `ami-c7d092f7` (Centos 7). |
+| ami_id | The base ami to start from.  Defaults to `ami-3689325f` (Amazon Linux). |
 | aws_access_key_id | Access key for account. |
 | aws_secret_access_key | Secret access key for account. |
+| delete_volumes_on_tear_down | When tearing down instance, also delete volumes.  If using CentOS, you should set this to `true`.  Defaults to `false`.
 | key_filename | The filename of your .pem file. |
 | key_name | The name of the secret key for the EC2 instance to use. |
 | instance_name | The name to tag the instance with. |
 | instance_type | The EC2 instance type.  [(See instance types)](http://aws.amazon.com/ec2/pricing/). |
 | region | The AWS region to connect to. |
 | security_groups | Security groups to grant to the instance.  If more than one, seperate with commas. |
-| user | The user to login as when connecting via ssh.  Defaults to `centos`. |
+| user | The user to login as when connecting via ssh.  Defaults to `ec2-user`. |
 
 ### gtfs.ini
 
@@ -83,6 +81,19 @@ You'll need to create a bunch of config files before running the deployment scri
 | --- | --- |
 | pg_username | The role that OneBusAway will use when connecting to postgresql. |
 | pg_password | The password that OneBusAway will use when connecting to postgresql. |
+
+## Running Scripts
+
+If using linux, the executable files to run scripts will be in the `bin` folder instead of `Scripts`.  In the remainder of the docs, whenever it says "run script `script_name`", you'll run the script by doing `bin/script_name` or `.\Scripts\script_name` on linux and windows respectively.
+
+## Disabling IPv6
+
+Some webapps try to serve themselves using IPv6, so IPv6 is disabled on the machine.  This must be done manually.  Follow these steps to disable IPv6:
+
+1.  `sudo su`
+2.  `echo "net.ipv6.conf.default.disable_ipv6=1" >> /etc/sysctl.conf`
+3.  `echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf`
+4.  `sysctl -p`
 
 ## EC2 PostgreSQL Setup
 

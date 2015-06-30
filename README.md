@@ -65,6 +65,7 @@ You'll need to create a bunch of config files before running the deployment scri
 | region | The AWS region to connect to. |
 | security_groups | Security groups to grant to the instance.  If more than one, seperate with commas. |
 | user | The user to login as when connecting via ssh.  Defaults to `ec2-user`. |
+| volume_size | Size of the AWS Volume for the new instance in GB.  Defaults to `40`. | 
 
 ### gtfs.ini
 

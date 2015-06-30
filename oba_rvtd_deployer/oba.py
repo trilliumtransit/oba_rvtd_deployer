@@ -176,7 +176,7 @@ class ObaRvtdFab:
         '''Starts tomcat and xwiki servers.
         '''
         
-        sudo('set -m; /usr/local/tomcat/bin/startup.sh')
+        sudo('set -m; sudo /usr/local/tomcat/bin/startup.sh')
         # writing output to /dev/null because logs are already written to /usr/local/xwiki/data/logs
         sudo('set -m; nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &')
         

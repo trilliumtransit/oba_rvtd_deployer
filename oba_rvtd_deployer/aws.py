@@ -36,11 +36,20 @@ def launch_new():
     # connect to AWS and launch new instance
     aws_conf = get_aws_config()
     conn = get_aws_connection()
+    
+    print('Preparing volume')
+    dev_xvda = boto.ec2.blockdevicemapping.EBSBlockDeviceType()
+    dev_xvda.size = aws_conf.get('DEFAULT', 'volume_size')
+    dev_xvda.delete_on_termination = True
+    block_device_map = boto.ec2.blockdevicemapping.BlockDeviceMapping()
+    block_device_map['/dev/xvda'] = dev_xvda 
+    
     print('Launching new instance')
     reservation = conn.run_instances(aws_conf.get('DEFAULT', 'ami_id'),
                                      instance_type=aws_conf.get('DEFAULT', 'instance_type'),
                                      key_name=aws_conf.get('DEFAULT', 'key_name'),
-                                     security_groups=aws_conf.get('DEFAULT', 'security_groups').split(','))
+                                     security_groups=aws_conf.get('DEFAULT', 'security_groups').split(','),
+                                     block_device_map=block_device_map)
     
     # Get the instance
     instance = reservation.instances[0]

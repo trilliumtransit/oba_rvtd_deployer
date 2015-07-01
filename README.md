@@ -91,6 +91,20 @@ You'll need to create a bunch of config files before running the deployment scri
 
 If using linux, the executable files to run scripts will be in the `bin` folder instead of `Scripts`.  In the remainder of the docs, whenever it says "run script `script_name`", you'll run the script by doing `bin/script_name` or `.\Scripts\script_name` on linux and windows respectively.
 
+| Script Name | Description |
+| --- | --- |
+| clean_config | Deletes the "config" folder. |
+| setup_config | Helper script to create configuration files for AWS, OneBusAway and updating and validating GTFS. |
+| launch_new_ec2 | Launches a new Amazon EC2 instance and installs the essential software to run OneBusAway. |
+| tear_down_ec2 | Terminates an Amazon EC2 instance. |
+| install_oba | Installs OneBusAway on server by compiling with maven. |
+| validate_gtfs | Downloads and validates the static GTFS. |
+| update_gtfs | Creates a new data bundle for OneBusAway. Validate the GTFS if no GTFS file found. |
+| deploy_oba | Deploys the OneBusAway webapps to Tomcat. |
+| start_oba | Starts Tomcat and xWiki Servers. |
+| stop_oba | Stops Tomcat and xWiki Servers. |
+| deploy_master | Combines following scripts in order: launch_new_ec2, install_oba, update_gtfs, deploy_oba, start_oba. |
+
 ## Disabling IPv6
 
 Some webapps try to serve themselves using IPv6, so IPv6 is disabled on the machine.  This must be done manually.  Follow these steps to disable IPv6:

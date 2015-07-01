@@ -104,6 +104,9 @@ class GtfsFab:
 
 def validate_gtfs():
     '''Download (if needed) and validate the latest static GTFS file.
+    
+    Returns:
+        boolean: True if no errors in GTFS.
     '''
     
     # get gtfs settings
@@ -151,10 +154,10 @@ def validate_gtfs():
     print('GTFS validation report written to {0}'.format(report_filenmae))
     
     # post-validation
-    gtfs_fatal_validation = False
+    gtfs_validated = True
     num_errors = accumulator.ErrorCount()
     if num_errors > 0:
-        gtfs_fatal_validation = True
+        gtfs_validated = False
         print('{0} errors in GTFS data'.format(num_errors))
         
     num_warnings = accumulator.WarningCount()
@@ -163,9 +166,9 @@ def validate_gtfs():
         
     if 'ExpirationDate' in accumulator.ProblemListMap(TYPE_WARNING).keys():
         print('GTFS Feed has expired.')
-        gtfs_fatal_validation = True
+        gtfs_validated = False
         
-    return gtfs_fatal_validation
+    return gtfs_validated
 
 
 def update(instance_dns_name=None, refresh_gtfs_file=False):
@@ -180,7 +183,8 @@ def update(instance_dns_name=None, refresh_gtfs_file=False):
     '''
     
     if not os.path.exists(gtfs_file_name) or refresh_gtfs_file:
-        validate_gtfs()
+        if not validate_gtfs():
+            raise Exception('GTFS static file validation Failed.')
         
     if not instance_dns_name:
         instance_dns_name = input('Enter EC2 public dns name: ')

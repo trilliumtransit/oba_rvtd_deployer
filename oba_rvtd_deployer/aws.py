@@ -7,11 +7,12 @@ import sys
 import time
 
 import boto.ec2
-from fabric.api import env, run, sudo, cd
+from fabric.api import env, run, sudo, cd, put
 from fabric.exceptions import NetworkError
 
-from oba_rvtd_deployer import REPORTS_DIR
+from oba_rvtd_deployer import REPORTS_DIR, CONFIG_TEMPLATE_DIR, CONFIG_DIR
 from oba_rvtd_deployer.config import get_aws_config
+from oba_rvtd_deployer.fab_crontab import crontab_update
 from oba_rvtd_deployer.util import FabLogger
 
 
@@ -110,6 +111,8 @@ def launch_new():
 
 class AwsFab:
     
+    aws_conf = get_aws_config()
+    
     def __init__(self, host_name, user, key_filename):
         '''Constructor for Class.  Sets up fabric environment.
         
@@ -160,11 +163,34 @@ class AwsFab:
         # self.install_helpers()
         if not exclude_pg:
             self.install_pg()
+        self.install_custom_monitoring()
         self.install_git()
         self.install_jdk()
         self.install_maven()
         self.install_tomcat()
         self.install_xwiki()
+        
+    def install_custom_monitoring(self):
+        '''Installs a custom monitoring script to monitor memory and disk utilization.
+        '''
+        
+        # install helpers
+        sudo('yum -y install perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https')
+        
+        # dl scripts
+        run('wget http://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.1.zip')
+        sudo('unzip CloudWatchMonitoringScripts-1.2.1.zip -d /usr/local')
+        run('rm CloudWatchMonitoringScripts-1.2.1.zip')
+        
+        # prepare the monitoring crontab        
+        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'monitoring_crontab')) as f:
+            cron = f.read()
+            
+        cron = cron.format(self.aws_conf.get('DEFAULT', 'aws_access_key_id'),
+                           self.aws_conf.get('DEFAULT', 'aws_secret_access_key'))
+            
+        # start crontab for aws monitoring
+        crontab_update(cron, 'aws_monitoring')
         
     def install_helpers(self):
         '''Installs various utilities (typically not included with CentOS).
@@ -213,6 +239,9 @@ class AwsFab:
         print('Please ssh as root onto the machine and follow the instructions in the section "EC2 PostgreSQL Setup".')
         input('Press enter to continue...')
         
+        # start postgresql on boot
+        sudo('chkconfig postgresql on')
+        
     def install_tomcat(self):
         '''Configures Tomcat on EC2 instance.
         '''
@@ -229,6 +258,9 @@ class AwsFab:
         # allow copying of files to webapp dir
         with cd('/usr/local/tomcat'):
             sudo('chmod 766 webapps')
+            
+        # add logging rotation for catalina.out
+        put(os.path.join(CONFIG_TEMPLATE_DIR, 'tomcat_catalina_out'), '/etc/logrotate.d', True)
             
     def install_xwiki(self):
         

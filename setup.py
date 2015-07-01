@@ -14,9 +14,6 @@ setup(
             # config scripts
             'clean_config=oba_rvtd_deployer.config:clean',
             'setup_config=oba_rvtd_deployer.config:setup_all',
-            'setup_aws=oba_rvtd_deployer.config:setup_aws',
-            'setup_gtfs=oba_rvtd_deployer.config:setup_gtfs',
-            'setup_oba=oba_rvtd_deployer.config:setup_oba',
             
             # aws/oba installation
             'launch_new_ec2=oba_rvtd_deployer.aws:launch_new',

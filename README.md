@@ -132,7 +132,7 @@ There is some manual setup required for setting up PostgreSQL.
 
 2.  Start postgresql: `sudo service postgresql start`
 3.  Enter into the psql edit mode:  `psql -U postgres`
-3.  Create a login user for OneBusAway (replace username with your choice): `CREATE ROLE username1 PASSWORD 'password';`
+3.  Create a login user for OneBusAway (replace username with your choice): `CREATE USER username1 PASSWORD 'password';`
 4.  Create a group role for that user (replace group role name with your choice): `CREATE ROLE groupname1;`
 5.  Grant group role to login user (replace names): `GRANT groupname1 TO username1;`
 6.  Create the databases (KEEP db names!): `CREATE DATABASE org_onebusaway_users ENCODING = 'UTF8';` `CREATE DATABASE org_onebusaway_database ENCODING = 'UTF8';`

@@ -119,7 +119,7 @@ Some webapps try to serve themselves using IPv6, so IPv6 is disabled on the mach
 There is some manual setup required for setting up PostgreSQL.
 
 0.  Change to root user:  `sudo su`.
-1.  Edit the file `/var/lib/pgsql/data/pg_hba.conf`.  Change this line:
+1.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change this line:
     ```
     local   all         all                                       peer
     ```
@@ -137,7 +137,7 @@ There is some manual setup required for setting up PostgreSQL.
 5.  Grant group role to login user (replace names): `GRANT groupname1 TO username1;`
 6.  Create the databases (KEEP db names!): `CREATE DATABASE org_onebusaway_users ENCODING = 'UTF8';` `CREATE DATABASE org_onebusaway_database ENCODING = 'UTF8';`
 7.  Grant all on the databases to group role (replace group role name): `GRANT ALL ON DATABASE org_onebusaway_users TO groupname1;` `GRANT ALL ON DATABASE org_onebusaway_database TO groupname1;`
-8.  Edit the file `/var/lib/pgsql/data/pg_hba.conf`.  Change these lines:
+8.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change these lines:
     ```
     local   all             all                                     trust
     # IPv4 local connections:

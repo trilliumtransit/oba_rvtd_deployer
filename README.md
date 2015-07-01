@@ -13,6 +13,8 @@ Script(s) to deploy and manage OneBusAway on Amazon EC2 for Rogue Valley Transpo
 * [Running Scripts](#running-scripts)
 * [Disabling IPv6](#disabling-ipv6)
 * [PostgreSQL Setup](#ec2-postgresql-setup)
+* [OneBusAway Setup](#onebusaway-setup)
+* [xWiki Setup](#xwiki-setup)
 
 ## Installation
 
@@ -95,7 +97,7 @@ If using linux, the executable files to run scripts will be in the `bin` folder 
 | --- | --- |
 | clean_config | Deletes the "config" folder. |
 | setup_config | Helper script to create configuration files for AWS, OneBusAway and updating and validating GTFS. |
-| launch_new_ec2 | Launches a new Amazon EC2 instance and installs the essential software to run OneBusAway. |
+| launch_new_ec2 | Launches a new Amazon EC2 instance and installs the essential software to run OneBusAway.  User will be prompted to manually disable IPv6 and setup PostgreSQL. |
 | tear_down_ec2 | Terminates an Amazon EC2 instance. |
 | install_oba | Installs OneBusAway on server by compiling with maven. |
 | validate_gtfs | Downloads and validates the static GTFS. |
@@ -103,7 +105,7 @@ If using linux, the executable files to run scripts will be in the `bin` folder 
 | deploy_oba | Deploys the OneBusAway webapps to Tomcat. |
 | start_oba | Starts Tomcat and xWiki Servers. |
 | stop_oba | Stops Tomcat and xWiki Servers. |
-| deploy_master | Combines following scripts in order: launch_new_ec2, install_oba, update_gtfs, deploy_oba, start_oba. |
+| deploy_master | Combines following scripts in order: launch_new_ec2, install_oba, update_gtfs, deploy_oba, start_oba.  Be sure to manually setup OneBusAway and xWiki after the server is ready. |
 
 ## Disabling IPv6
 
@@ -152,3 +154,26 @@ There is some manual setup required for setting up PostgreSQL.
     host    all             all             127.0.0.1/32            md5
     ```
 9.  Restart postgresql: `sudo service postgresql restart`
+
+## OneBusAway Setup
+
+After installing OneBusAway, the webapp will need to be configured manually.  Get the public dns name of the instance and add to the url so you get `ec2-###-###-###-###.us-west-2.compute.amazonaws.com:8080/onebusaway-webapp`.  Upon starting, you'll be prompted to add an admin account.
+
+## xWiki Setup
+
+After installing and starting xWiki for the first time, it will be blank.  It is best to import a backup to have all needed pages.  Follow these steps to import the backup:
+
+1.  Download a backup from [here](https://drive.google.com/file/d/0B1ueEUCcTtKoYjF0X2g3S05nOXM/view?usp=sharing).
+2.  Remote onto machine.
+3.  Stop xWiki server using command `sudo /usr/local/xwiki/stop_xwiki.sh -p 8081`.
+4.  Edit the file `/usr/local/xwiki/webapps/xwiki/WEB-INF/xwiki.cfg`.
+5.  Uncomment the line `xwiki.superadminpassword=PASSWORD`.
+6.  Start xWiki server using command `sudo nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &`.
+7.  Open browser and go to `ec2-###-###-###-###.us-west-2.compute.amazonaws.com:8081`.
+8.  Login using username `superadmin` and the password you defined.
+9.  Browse to import tool.  Click on `Home` > `Administer Wiki`.   Then click `Content`.  Then click `Import`.
+10.  Upload file (the backup file you downloaded in step 1).
+11.  Select the file and select option `Replace the document history with the history from the package`.  Then click `Import`.
+12.  Stop xWiki server using command `sudo /usr/local/xwiki/stop_xwiki.sh -p 8081`.
+13.  Edit the file `/usr/local/xwiki/webapps/xwiki/WEB-INF/xwiki.cfg` and comment out the superadmin line.
+14.  Start xWiki server using command `sudo nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &`.

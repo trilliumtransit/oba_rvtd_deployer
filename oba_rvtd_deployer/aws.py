@@ -261,6 +261,15 @@ class AwsFab:
             
         # add logging rotation for catalina.out
         put(os.path.join(CONFIG_TEMPLATE_DIR, 'tomcat_catalina_out'), '/etc/logrotate.d', True)
+        
+        # add init.d script
+        put(os.path.join(CONFIG_TEMPLATE_DIR, 'tomcat_init.d'), '/etc/init.d', True)
+        with cd('/etc/init.d'):
+            sudo('mv tomcat_init.d tomcat')
+            sudo('chmod 755 tomcat')
+            sudo('chown root tomcat')
+            sudo('chgrp root tomcat')
+            sudo('chkconfig --add tomcat')
             
     def install_xwiki(self):
         
@@ -272,6 +281,15 @@ class AwsFab:
         
         with cd('/usr/local'):
             sudo('ln -s xwiki-enterprise-jetty-hsqldb-7.1.1 xwiki')
+            
+        # add init.d script
+        put(os.path.join(CONFIG_TEMPLATE_DIR, 'xwiki_init.d'), '/etc/init.d', True)
+        with cd('/etc/init.d'):
+            sudo('mv xwiki_init.d xwiki')
+            sudo('chmod 755 xwiki')
+            sudo('chown root xwiki')
+            sudo('chgrp root xwiki')
+            sudo('chkconfig --add xwiki')
         
 
 def tear_down(instance_id=None, conn=None):

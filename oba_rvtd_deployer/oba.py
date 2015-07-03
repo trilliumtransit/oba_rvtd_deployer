@@ -182,10 +182,6 @@ class ObaRvtdFab:
         # writing output to /dev/null because logs are already written to /usr/local/xwiki/data/logs
         sudo('set -m; sudo nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &')
         
-        # add/update reboot crontabs in case of reboot
-        crontab_update('@reboot sudo /usr/local/tomcat/bin/startup.sh', 'tomcat_reboot')
-        crontab_update('@reboot nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &', 'xwiki_reboot')
-        
     def stop_servers(self):
         '''Stops tomcat and xwiki servers.
         '''
@@ -193,10 +189,6 @@ class ObaRvtdFab:
         # stop servers immediately
         sudo('set -m; /usr/local/tomcat/bin/shutdown.sh')
         sudo('set -m; /usr/local/xwiki/stop_xwiki.sh -p 8081')
-        
-        # remove startup cron scripts
-        crontab_remove('tomcat_reboot')
-        crontab_remove('xwiki_reboot')
                     
 
 def install(instance_dns_name=None):

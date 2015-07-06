@@ -165,8 +165,11 @@ def validate_gtfs():
         print('{0} warnings about GTFS data'.format(num_warnings))
         
     if 'ExpirationDate' in accumulator.ProblemListMap(TYPE_WARNING).keys():
-        print('GTFS Feed has expired.')
-        gtfs_validated = False
+        start_date, end_date = schedule.GetDateRange()
+        last_service_day = datetime(*(time.strptime(end_date, "%Y%m%d")[0:6]))
+        if last_service_day < datetime.now():
+            print('GTFS Feed has expired.')
+            gtfs_validated = False
         
     return gtfs_validated
 

@@ -56,7 +56,7 @@ def launch_new():
     instance = reservation.instances[0]
     
     # Check if it's up and running a specified maximum number of times
-    max_retries = 6
+    max_retries = 10
     num_retries = 0
     
     # Check up on its status every so often

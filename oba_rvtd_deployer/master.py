@@ -10,7 +10,7 @@ def run_all():
     '''
     
     # dl gtfs and validate it
-    if validate_gtfs():
+    if not validate_gtfs():
         print('GTFS Validation Failed')
         sys.exit()
     

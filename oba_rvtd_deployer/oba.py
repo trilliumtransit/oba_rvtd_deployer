@@ -64,6 +64,7 @@ class ObaRvtdFab:
         self.clone_repo()
         self.install_federation_webapp()
         self.install_api_webapp()
+        self.install_sms_webapp()
         self.install_webapp()
         
     def clone_repo(self):
@@ -111,14 +112,15 @@ class ObaRvtdFab:
         '''Installs the api-webapp.
         '''
         
-        if self.oba_conf.get('DEFAULT', 'allow_api_test_key') == 'True':
+        if self.oba_conf.get('DEFAULT', 'allow_api_test_key').lower() == 'true':
             api_test_xml = '<bean class="org.onebusaway.users.impl.CreateApiKeyAction"><property name="key" value="TEST"/></bean>'
         else:
             api_test_xml = ''
         
-        api_config = dict(pg_username=self.oba_conf.get('DEFAULT', 'pg_username'),
+        api_config = dict(api_testing=api_test_xml,
+                          elastic_ip=self.aws_conf.get('DEFAULT', 'elastic_ip'),
                           pg_password=self.oba_conf.get('DEFAULT', 'pg_password'),
-                          api_testing=api_test_xml)
+                          pg_username=self.oba_conf.get('DEFAULT', 'pg_username'))
         
         self.build_webapp(api_config, 
                           'api-webapp-data-sources.xml',
@@ -142,6 +144,17 @@ class ObaRvtdFab:
                           'transit-data-federation-webapp-data-sources.xml',
                           'onebusaway-transit-data-federation-webapp')
         
+    def install_sms_webapp(self):
+        '''Installs the sms-webapp.
+        '''
+        
+        sms_config = dict(pg_username=self.oba_conf.get('DEFAULT', 'pg_username'),
+                          pg_password=self.oba_conf.get('DEFAULT', 'pg_password'))
+        
+        self.build_webapp(sms_config, 
+                          'sms-webapp-data-sources.xml',
+                          'onebusaway-sms-webapp')
+        
     def install_webapp(self):
         '''Installs the webapp.
         '''
@@ -164,6 +177,7 @@ class ObaRvtdFab:
                                            'webapps')
         for webapp in ['onebusaway-transit-data-federation-webapp',
                        'onebusaway-api-webapp',
+                       'onebusaway-sms-webapp',
                        'onebusaway-webapp']:
             sudo('cp {0} {1}'.format(unix_path_join('/home',
                                                     self.user,

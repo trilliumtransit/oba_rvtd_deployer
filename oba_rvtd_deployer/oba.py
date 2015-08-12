@@ -160,7 +160,8 @@ class ObaRvtdFab:
         '''
         
         webapp_config = dict(pg_username=self.oba_conf.get('DEFAULT', 'pg_username'),
-                             pg_password=self.oba_conf.get('DEFAULT', 'pg_password'))
+                             pg_password=self.oba_conf.get('DEFAULT', 'pg_password'),
+                             elastic_ip=self.aws_conf.get('DEFAULT', 'elastic_ip'))
         
         self.build_webapp(webapp_config, 
                           'webapp-data-sources.xml',

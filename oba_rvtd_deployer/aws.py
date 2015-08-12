@@ -247,13 +247,13 @@ class AwsFab:
         '''
         
         # get tomcat from direct download
-        sudo('wget http://mirrors.sonic.net/apache/tomcat/tomcat-7/v7.0.62/bin/apache-tomcat-7.0.62.tar.gz')
+        sudo('wget http://mirror.cogentco.com/pub/apache/tomcat/tomcat-7/v7.0.63/bin/apache-tomcat-7.0.63.tar.gz')
         
         # move to a local area for better organization
-        sudo('sudo tar xzf apache-tomcat-7.0.62.tar.gz -C /usr/local')
-        run('rm -rf apache-tomcat-7.0.62.tar.gz')
+        sudo('sudo tar xzf apache-tomcat-7.0.63.tar.gz -C /usr/local')
+        run('rm -rf apache-tomcat-7.0.63.tar.gz')
         with cd('/usr/local'):
-            sudo('ln -s apache-tomcat-7.0.62 tomcat')
+            sudo('ln -s apache-tomcat-7.0.63 tomcat')
             
         # allow copying of files to webapp dir
         with cd('/usr/local/tomcat'):

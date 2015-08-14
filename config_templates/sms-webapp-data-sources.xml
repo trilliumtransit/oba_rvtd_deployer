@@ -28,6 +28,18 @@ xsi:schemaLocation="
     <property name="postalCode" value="97501" />
 </bean>
 
+<bean id="serviceAreaServiceImpl" class="org.onebusaway.presentation.impl.ServiceAreaServiceImpl">
+    <property name="defaultBounds">
+      <bean class="org.onebusaway.geospatial.model.CoordinateBounds">
+        <property name="minLat" value="42.175" />
+        <property name="minLon" value="-122.97" />
+        <property name="maxLat" value="42.445" />
+        <property name="maxLon" value="-122.671" />
+      </bean>
+    </property>
+    <property name="calculateDefaultBoundsFromAgencyCoverage" value="false" />
+</bean>
+
 <bean id="smsAbbreviationsFactory" class="org.onebusaway.presentation.impl.text.XmlTextModificationsFactory">
     <property name="resource" value="classpath:sms-destination-abbreviations.xml" />
 </bean>

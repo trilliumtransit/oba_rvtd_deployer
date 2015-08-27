@@ -185,12 +185,14 @@ class AwsFab:
         # prepare the monitoring crontab        
         with open(os.path.join(CONFIG_TEMPLATE_DIR, 'monitoring_crontab')) as f:
             cron = f.read()
-            
-        cron = cron.format(self.aws_conf.get('DEFAULT', 'aws_access_key_id'),
-                           self.aws_conf.get('DEFAULT', 'aws_secret_access_key'))
+        
+        cron_settings = dict(aws_access_key_id=self.aws_conf.get('DEFAULT', 'aws_access_key_id'),
+                             aws_secret_key=self.aws_conf.get('DEFAULT', 'aws_secret_access_key'),
+                             cron_email=self.aws_conf.get('DEFAULT', 'cron_email'))  
+        aws_logging_cron = cron.format(**cron_settings)
             
         # start crontab for aws monitoring
-        crontab_update(cron, 'aws_monitoring')
+        crontab_update(aws_logging_cron, 'aws_monitoring')
         
     def install_helpers(self):
         '''Installs various utilities (typically not included with CentOS).

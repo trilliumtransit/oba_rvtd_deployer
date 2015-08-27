@@ -33,3 +33,5 @@ def run_all():
 
     # move GWT files to production webapp dir
     copy_gwt(public_dns_name)
+    
+    print('Deployment of new server has finished.  Please follow steps: OneBusAway Setup and xWiki Setup')

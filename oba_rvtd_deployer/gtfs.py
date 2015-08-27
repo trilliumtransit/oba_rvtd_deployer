@@ -7,17 +7,18 @@ import os
 import sys
 import time
 
-from fabric.api import env, run, put, cd
+from fabric.api import env, run, put, cd, sudo
 from fabric.exceptions import NetworkError
 from transitfeed.gtfsfactory import GetGtfsFactory
 from transitfeed.problems import ProblemReporter, TYPE_WARNING
 import requests
 import transitfeed
 
-from oba_rvtd_deployer import DL_DIR, REPORTS_DIR
+from oba_rvtd_deployer import CONFIG_DIR, CONFIG_TEMPLATE_DIR, DL_DIR, REPORTS_DIR
 from oba_rvtd_deployer.config import (get_aws_config, 
                                       get_gtfs_config,
                                       get_oba_config)
+from oba_rvtd_deployer.fab_crontab import crontab_update
 from oba_rvtd_deployer.feedvalidator import HTMLCountingProblemAccumulator
 from oba_rvtd_deployer.util import FabLogger, unix_path_join
 from fabric.contrib.files import exists
@@ -34,6 +35,12 @@ class GtfsFab:
     oba_conf = get_oba_config()
     oba_base_folder = oba_conf.get('DEFAULT', 'oba_base_folder')
     user = aws_conf.get('DEFAULT', 'user')
+    data_dir = unix_path_join('/home', user, 'data')
+    bundle_dir = unix_path_join(data_dir, 'bundle')
+    federation_builder_folder = unix_path_join('/home', 
+                                               user, 
+                                               oba_base_folder, 
+                                               'onebusaway-transit-data-federation-builder')
         
     def __init__(self, host_name):
         '''Constructor for Class.  Sets up fabric environment.
@@ -72,15 +79,11 @@ class GtfsFab:
         '''Uploads the downloaded gtfs zip file to the server and builds a new bundle.
         '''
         
-        data_dir = unix_path_join('/home', 
-                                  self.user,
-                                  'data')
-        remote_gtfs_file = unix_path_join(data_dir, gtfs_file_name_raw)
-        bundle_dir = unix_path_join(data_dir, 'bundle')
+        remote_gtfs_file = unix_path_join(self.data_dir, gtfs_file_name_raw)
         
         # check if data folders exists
-        if not exists(data_dir):
-            run('mkdir {0}'.format(data_dir))
+        if not exists(self.data_dir):
+            run('mkdir {0}'.format(self.data_dir))
             
         # remove old gtfs file (if needed)
         if exists(remote_gtfs_file):
@@ -95,12 +98,43 @@ class GtfsFab:
                                 'transit_data_federation',
                                 'bundle',
                                 'FederatedTransitDataBundleCreatorMain'])
-        with cd(unix_path_join(self.oba_conf.get('DEFAULT', 'oba_base_folder'),
-                               'onebusaway-transit-data-federation-builder')):
+        with cd(self.federation_builder_folder):
             run('java -classpath .:target/* {0} {1} {2}'.format(bundle_main,
                                                                 remote_gtfs_file,
-                                                                bundle_dir))
-
+                                                                self.bundle_dir))
+            
+    def install_gtfs_update_crontab(self):
+        '''Installs and starts a crontab to automatically dl and build a data bundle nightly.
+        '''
+        
+        # prepare update script
+        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh.sh')) as f:
+            refresh_template = f.read()
+            
+        refresh_script_file = os.path.join(CONFIG_DIR, 'gtfs_refresh.sh')
+        refresh_settings = dict(gtfs_dl_file=unix_path_join(self.data_dir, 'google_transit.zip'),
+                                gtfs_static_url=self.gtfs_conf.get('DEFAULT', 'gtfs_static_url'),
+                                gtfs_dl_logfile=unix_path_join(self.data_dir, 'nightly_dl.out'),
+                                federation_builder_folder=self.federation_builder_folder,
+                                bundle_dir=self.bundle_dir)
+        
+        with open(refresh_script_file, 'wb') as f:
+            f.write(refresh_template.format(**refresh_settings))
+            
+        put(refresh_script_file, '/usr/local/bin', True)
+        sudo('chown root /usr/local/bin/gtfs_refresh.sh')
+        sudo('chmod 755 /usr/local/bin/gtfs_refresh.sh')
+        
+        # prepare update script
+        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh_crontab')) as f:
+            refresh_cron_template = f.read()
+            
+        cron_settings = dict(cron_email=self.aws_conf.get('DEFAULT', 'cron_email'),
+                             logfile=unix_path_join(self.data_dir, 'nightly_bundle.out'))
+        gtfs_refresh_cron = refresh_cron_template.format(**cron_settings)
+            
+        crontab_update(gtfs_refresh_cron, 'gtfs_refresh_cron')
+    
 
 def validate_gtfs():
     '''Download (if needed) and validate the latest static GTFS file.
@@ -194,3 +228,4 @@ def update(instance_dns_name=None, refresh_gtfs_file=False):
         
     gtfs_fab = GtfsFab(instance_dns_name)
     gtfs_fab.update_gtfs()
+    gtfs_fab.install_gtfs_update_crontab()

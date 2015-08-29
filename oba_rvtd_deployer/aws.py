@@ -10,10 +10,10 @@ import boto.ec2
 from fabric.api import env, run, sudo, cd, put
 from fabric.exceptions import NetworkError
 
-from oba_rvtd_deployer import REPORTS_DIR, CONFIG_TEMPLATE_DIR, CONFIG_DIR
+from oba_rvtd_deployer import REPORTS_DIR, CONFIG_TEMPLATE_DIR
 from oba_rvtd_deployer.config import get_aws_config
 from oba_rvtd_deployer.fab_crontab import crontab_update
-from oba_rvtd_deployer.util import FabLogger
+from oba_rvtd_deployer.util import FabLogger, write_template
 
 
 def get_aws_connection():
@@ -78,26 +78,7 @@ def launch_new():
     
     # Now that the status is running, it's not yet launched. 
     # The only way to tell if it's fully up is to try to SSH in.
-    num_retries = 0
-    aws_system = AwsFab(instance.public_dns_name,
-                        aws_conf.get('DEFAULT', 'user'),
-                        aws_conf.get('DEFAULT', 'key_filename'))
-    
-    if status == "running":
-        retry = True
-        while retry:
-            try:
-                # SSH into the box here.
-                aws_system.test_cmd()
-                retry = False
-            except NetworkError as e:
-                print(e)
-                if num_retries > max_retries:
-                    tear_down(instance.id, conn)
-                    raise Exception('Maximum Number of SSH Retries Hit.  Did EC2 instance get configured with ssh correctly?')
-                num_retries += 1 
-                print('SSH failed (the system may still be starting up), waiting 10 seconds...')
-                time.sleep(10)
+    aws_system = AwsFab(instance.public_dns_name)
     
     # If we've reached this point, the instance is up and running.
     print('SSH working')
@@ -112,19 +93,35 @@ def launch_new():
 class AwsFab:
     
     aws_conf = get_aws_config()
+    user = aws_conf.get('DEFAULT', 'user')
     
-    def __init__(self, host_name, user, key_filename):
+    def __init__(self, host_name):
         '''Constructor for Class.  Sets up fabric environment.
         
         Args:
             host_name (string): ec2 public dns name
-            user (string): ec2 username
-            key_filename (string): file location for .pem file
         '''
         
-        env.host_string = '{0}@{1}'.format(user, host_name)
-        env.key_filename = [key_filename]
+        env.host_string = '{0}@{1}'.format(self.user, host_name)
+        env.key_filename = [self.aws_conf.get('DEFAULT', 'key_filename')]
         sys.stdout = FabLogger(os.path.join(REPORTS_DIR, 'aws_fab.log'))
+        
+        max_retries = 6
+        num_retries = 0
+        
+        retry = True
+        while retry:
+            try:
+                # SSH into the box here.
+                self.test_cmd()
+                retry = False
+            except NetworkError as e:
+                print(e)
+                if num_retries > max_retries:
+                    raise Exception('Maximum Number of SSH Retries Hit.  Did EC2 instance get configured with ssh correctly?')
+                num_retries += 1 
+                print('SSH failed (the system may still be starting up), waiting 10 seconds...')
+                time.sleep(10)
         
     def test_cmd(self):
         '''A test command to see if everything is running ok.
@@ -246,26 +243,24 @@ class AwsFab:
         
     def install_tomcat(self):
         '''Configures Tomcat on EC2 instance.
+        
+        Unlinke other items, this is placed in /home/{user} directory,
+        so that it can be restarted with cron to refresh gtfs updates.
         '''
         
         # get tomcat from direct download
-        sudo('wget http://mirror.cogentco.com/pub/apache/tomcat/tomcat-7/v7.0.63/bin/apache-tomcat-7.0.63.tar.gz')
+        run('wget http://apache.mirrors.ionfish.org/tomcat/tomcat-7/v7.0.64/bin/apache-tomcat-7.0.64.tar.gz')
         
         # move to a local area for better organization
-        sudo('sudo tar xzf apache-tomcat-7.0.63.tar.gz -C /usr/local')
-        run('rm -rf apache-tomcat-7.0.63.tar.gz')
-        with cd('/usr/local'):
-            sudo('ln -s apache-tomcat-7.0.63 tomcat')
-            
-        # allow copying of files to webapp dir
-        with cd('/usr/local/tomcat'):
-            sudo('chmod 766 webapps')
-            
+        run('tar xzf apache-tomcat-7.0.64.tar.gz')
+        run('rm -rf apache-tomcat-7.0.64.tar.gz')
+        run('mv apache-tomcat-7.0.64 tomcat')
+                    
         # add logging rotation for catalina.out
-        put(os.path.join(CONFIG_TEMPLATE_DIR, 'tomcat_catalina_out'), '/etc/logrotate.d', True)
+        put(write_template(dict(user=self.user), 'tomcat_catalina_out'), '/etc/logrotate.d', True)
         
         # add init.d script
-        put(os.path.join(CONFIG_TEMPLATE_DIR, 'tomcat_init.d'), '/etc/init.d', True)
+        put(write_template(dict(user=self.user), 'tomcat_init.d'), '/etc/init.d', True)
         with cd('/etc/init.d'):
             sudo('mv tomcat_init.d tomcat')
             sudo('chmod 755 tomcat')

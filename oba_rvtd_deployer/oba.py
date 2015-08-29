@@ -1,4 +1,3 @@
-from oba_rvtd_deployer.fab_crontab import crontab_update, crontab_remove
 try: 
     input = raw_input
 except NameError: 
@@ -10,11 +9,11 @@ import time
 from fabric.api import env, run, put, cd, sudo
 from fabric.exceptions import NetworkError
 
-from oba_rvtd_deployer import CONFIG_TEMPLATE_DIR, CONFIG_DIR, REPORTS_DIR
+from oba_rvtd_deployer import REPORTS_DIR
 from oba_rvtd_deployer.config import (get_aws_config, 
                                       get_oba_config,
                                       get_gtfs_config)
-from oba_rvtd_deployer.util import unix_path_join, FabLogger
+from oba_rvtd_deployer.util import unix_path_join, FabLogger, write_template
 
 
 class ObaRvtdFab:
@@ -86,18 +85,11 @@ class ObaRvtdFab:
             config_tempalte_file (string): filename of the config template file.
             webapp (string): The name of the webapp to build.
         '''
-        temp_data_sources_filename = os.path.join(CONFIG_DIR, 'data-sources.xml')
-        
-        # get the data sources template
-        with open(os.path.join(CONFIG_TEMPLATE_DIR, config_template_file)) as f:
-            data_sources_template = f.read()
-            
-        # write a new data sources file
-        with open(temp_data_sources_filename, 'w') as f:
-            f.write(data_sources_template.format(**data_dict))
-            
+                   
         # upload the data sources file to the project
-        put(temp_data_sources_filename, 
+        put(write_template(data_dict, 
+                           config_template_file, 
+                           'data-sources.xml'), 
             unix_path_join(self.oba_base_folder,
                            webapp,
                            'src',
@@ -172,28 +164,28 @@ class ObaRvtdFab:
         '''
         
         # copy the war files to tomcat for each webapp
-        tomcat_webapp_dir = unix_path_join('/usr',
-                                           'local',
+        tomcat_webapp_dir = unix_path_join('/home',
+                                           self.user,
                                            'tomcat',
                                            'webapps')
         for webapp in ['onebusaway-transit-data-federation-webapp',
                        'onebusaway-api-webapp',
                        'onebusaway-sms-webapp',
                        'onebusaway-webapp']:
-            sudo('cp {0} {1}'.format(unix_path_join('/home',
-                                                    self.user,
-                                                    self.oba_base_folder,
-                                                    webapp,
-                                                    'target',
-                                                    webapp + '.war'),
-                                     tomcat_webapp_dir))
+            run('cp {0} {1}'.format(unix_path_join('/home',
+                                                   self.user,
+                                                   self.oba_base_folder,
+                                                   webapp,
+                                                   'target',
+                                                   webapp + '.war'),
+                                    tomcat_webapp_dir))
             
     def start_servers(self):
         '''Starts tomcat and xwiki servers.
         '''
         
         # start servers
-        sudo('set -m; sudo /usr/local/tomcat/bin/startup.sh')
+        run('set -m; /home/{0}/tomcat/bin/startup.sh'.format(self.user))
         # writing output to /dev/null because logs are already written to /usr/local/xwiki/data/logs
         sudo('set -m; sudo nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &')
         
@@ -202,7 +194,7 @@ class ObaRvtdFab:
         '''
         
         # stop servers immediately
-        sudo('set -m; /usr/local/tomcat/bin/shutdown.sh')
+        run('set -m; /home/{0}/tomcat/bin/shutdown.sh'.format(self.user))
         sudo('set -m; /usr/local/xwiki/stop_xwiki.sh -p 8081')
                     
 

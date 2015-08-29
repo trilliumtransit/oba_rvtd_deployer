@@ -10,23 +10,23 @@
 
 
 RETVAL=$?
-CATALINA_HOME="/usr/local/tomcat"
+CATALINA_HOME="/home/{user}/tomcat"
 
-start() {
+start() {{
   if [ -f $CATALINA_HOME/bin/startup.sh ];
     then
   echo $"Starting Tomcat"
 	$CATALINA_HOME/bin/startup.sh
   fi
-}
+}}
 
-stop() {
+stop() {{
   if [ -f $CATALINA_HOME/bin/shutdown.sh ];
     then
    echo $"Stopping Tomcat"
    $CATALINA_HOME/bin/shutdown.sh
    fi
-}
+}}
 
 case "$1" in
  start)
@@ -40,7 +40,7 @@ case "$1" in
 		start
 	;;
  *)
- 	echo $"Usage: $0 {start|stop|restart}"
+ 	echo $"Usage: $0 {{start|stop|restart}}"
 	exit 1
 	;;
 esac

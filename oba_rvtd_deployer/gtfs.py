@@ -7,21 +7,21 @@ import os
 import sys
 import time
 
-from fabric.api import env, run, put, cd, sudo
+from fabric.api import env, run, put, cd
+from fabric.contrib.files import exists
 from fabric.exceptions import NetworkError
 from transitfeed.gtfsfactory import GetGtfsFactory
 from transitfeed.problems import ProblemReporter, TYPE_WARNING
 import requests
 import transitfeed
 
-from oba_rvtd_deployer import CONFIG_DIR, CONFIG_TEMPLATE_DIR, DL_DIR, REPORTS_DIR
+from oba_rvtd_deployer import CONFIG_TEMPLATE_DIR, DL_DIR, REPORTS_DIR
 from oba_rvtd_deployer.config import (get_aws_config, 
                                       get_gtfs_config,
                                       get_oba_config)
 from oba_rvtd_deployer.fab_crontab import crontab_update
 from oba_rvtd_deployer.feedvalidator import HTMLCountingProblemAccumulator
-from oba_rvtd_deployer.util import FabLogger, unix_path_join
-from fabric.contrib.files import exists
+from oba_rvtd_deployer.util import FabLogger, unix_path_join, write_template
 
 
 gtfs_file_name_raw = 'google_transit_{0}.zip'.format(datetime.now().strftime('%Y-%m-%d'))
@@ -37,6 +37,7 @@ class GtfsFab:
     user = aws_conf.get('DEFAULT', 'user')
     data_dir = unix_path_join('/home', user, 'data')
     bundle_dir = unix_path_join(data_dir, 'bundle')
+    script_dir = unix_path_join('/home', user, 'scripts')
     federation_builder_folder = unix_path_join('/home', 
                                                user, 
                                                oba_base_folder, 
@@ -108,29 +109,26 @@ class GtfsFab:
         '''
         
         # prepare update script
-        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh.sh')) as f:
-            refresh_template = f.read()
-            
-        refresh_script_file = os.path.join(CONFIG_DIR, 'gtfs_refresh.sh')
         refresh_settings = dict(gtfs_dl_file=unix_path_join(self.data_dir, 'google_transit.zip'),
                                 gtfs_static_url=self.gtfs_conf.get('DEFAULT', 'gtfs_static_url'),
                                 gtfs_dl_logfile=unix_path_join(self.data_dir, 'nightly_dl.out'),
                                 federation_builder_folder=self.federation_builder_folder,
-                                bundle_dir=self.bundle_dir)
+                                bundle_dir=self.bundle_dir,
+                                user=self.user)
         
-        with open(refresh_script_file, 'wb') as f:
-            f.write(refresh_template.format(**refresh_settings))
+        # check if script folders exists
+        if not exists(self.script_dir):
+            run('mkdir {0}'.format(self.script_dir))
             
-        put(refresh_script_file, '/usr/local/bin', True)
-        sudo('chown root /usr/local/bin/gtfs_refresh.sh')
-        sudo('chmod 755 /usr/local/bin/gtfs_refresh.sh')
-        
+        put(write_template(refresh_settings, 'gtfs_refresh.sh'), self.script_dir)
+                
         # prepare update script
         with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh_crontab')) as f:
             refresh_cron_template = f.read()
             
         cron_settings = dict(cron_email=self.aws_conf.get('DEFAULT', 'cron_email'),
-                             logfile=unix_path_join(self.data_dir, 'nightly_bundle.out'))
+                             logfile=unix_path_join(self.data_dir, 'nightly_bundle.out'),
+                             script_folder=self.script_dir)
         gtfs_refresh_cron = refresh_cron_template.format(**cron_settings)
             
         crontab_update(gtfs_refresh_cron, 'gtfs_refresh_cron')

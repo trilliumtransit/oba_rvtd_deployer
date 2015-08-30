@@ -121,6 +121,8 @@ class GtfsFab:
             run('mkdir {0}'.format(self.script_dir))
             
         put(write_template(refresh_settings, 'gtfs_refresh.sh'), self.script_dir)
+        with cd(self.script_dir):
+            run('chmod 755 gtfs_refresh.sh')
                 
         # prepare update script
         with open(os.path.join(CONFIG_TEMPLATE_DIR, 'gtfs_refresh_crontab')) as f:

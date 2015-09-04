@@ -19,6 +19,7 @@ setup(
             'launch_new_ec2=oba_rvtd_deployer.aws:launch_new',
             'tear_down_ec2=oba_rvtd_deployer.aws:tear_down',
             'install_oba=oba_rvtd_deployer.oba:install',
+            'install_watchdog=oba_rvtd_deployer.oba:install_watchdog',
             
             # oba/gtfs activation
             'validate_gtfs=oba_rvtd_deployer.gtfs:validate_gtfs',

@@ -72,6 +72,7 @@ def launch_new():
     
     if status == 'running':
         instance.add_tag("Name", aws_conf.get('DEFAULT', 'instance_name'))
+        instance.add_tag("Client", aws_conf.get('DEFAULT', 'client_name'))
     else:
         print('Instance status: ' + status)
         return None
@@ -82,6 +83,8 @@ def launch_new():
     
     # If we've reached this point, the instance is up and running.
     print('SSH working')
+    aws_system.set_timezone()
+    return
     aws_system.turn_off_ipv6()
     aws_system.install_pg()
     aws_system.update_system()
@@ -160,12 +163,21 @@ class AwsFab:
         # self.install_helpers()
         if not exclude_pg:
             self.install_pg()
+        self.set_timezone()
         self.install_custom_monitoring()
         self.install_git()
         self.install_jdk()
         self.install_maven()
         self.install_tomcat()
         self.install_xwiki()
+        
+    def set_timezone(self):
+        '''Changes the machine's localtime to the desired timezone.
+        '''
+        
+        with cd('/etc'):
+            sudo('rm -rf localtime')
+            sudo('ln -s {0} localtime'.format(self.aws_conf.get('DEFAULT', 'timezone')))        
         
     def install_custom_monitoring(self):
         '''Installs a custom monitoring script to monitor memory and disk utilization.

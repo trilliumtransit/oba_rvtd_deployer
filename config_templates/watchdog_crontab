@@ -1,0 +1,2 @@
+MAILTO={cron_email}
+*/5 * * * * /usr/bin/python {watchdog_script}

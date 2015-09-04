@@ -1,2 +1,2 @@
 MAILTO={cron_email}
-0 10 * * * {script_folder}/gtfs_refresh.sh > {logfile}
+0 3 * * * {script_folder}/gtfs_refresh.sh > {logfile}

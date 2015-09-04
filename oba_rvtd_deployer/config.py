@@ -26,6 +26,7 @@ def setup_all():
     setup_aws()
     setup_gtfs()
     setup_oba()
+    setup_watchdog()
     
     
 def setup(config_type):
@@ -40,7 +41,8 @@ def setup(config_type):
     
     display_name = dict(aws='Amazon Web Services (AWS)',
                         gtfs='GTFS static and Realtime Feeds',
-                        oba='OneBusAway for Rogue Valley Transit District')
+                        oba='OneBusAway for Rogue Valley Transit District',
+                        watchdog='OneBusAway Watchdog')
     
     print('-----------------')
     print('Setting up config for {0}'.format(display_name[config_type]))
@@ -73,9 +75,15 @@ def setup_gtfs():
 
 
 def setup_oba():
-    '''Sets up the configuration for RVTD GTFS webservices
+    '''Sets up the configuration for OneBusAway Webapps
     '''
     setup('oba')
+    
+    
+def setup_watchdog():
+    '''Sets up the configuration for OneBusAway Watchdog Script
+    '''
+    setup('watchdog')
     
     
 def get_config(config_type):
@@ -122,3 +130,12 @@ def get_oba_config():
         ConfigParser: the OBA config
     '''
     return get_config('oba')
+
+
+def get_watchdog_config():
+    '''Gets the OBA Watchdog settings
+    
+    Returns:
+        ConfigParser: the OBA Watchdog config
+    '''
+    return get_config('watchdog')

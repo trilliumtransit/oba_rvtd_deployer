@@ -7,12 +7,14 @@ import sys
 import time
 
 from fabric.api import env, run, put, cd, sudo
+from fabric.contrib.files import exists
 from fabric.exceptions import NetworkError
 
-from oba_rvtd_deployer import REPORTS_DIR
+from oba_rvtd_deployer import REPORTS_DIR, CONFIG_DIR, CONFIG_TEMPLATE_DIR
 from oba_rvtd_deployer.config import (get_aws_config, 
                                       get_oba_config,
-                                      get_gtfs_config)
+                                      get_gtfs_config, get_watchdog_config)
+from oba_rvtd_deployer.fab_crontab import crontab_update
 from oba_rvtd_deployer.util import unix_path_join, FabLogger, write_template
 
 
@@ -23,6 +25,8 @@ class ObaRvtdFab:
     oba_conf = get_oba_config()
     oba_base_folder = oba_conf.get('DEFAULT', 'oba_base_folder')
     user = aws_conf.get('DEFAULT', 'user')
+    config_dir = unix_path_join('/home', user, 'conf')
+    script_dir = unix_path_join('/home', user, 'scripts')
         
     def __init__(self, host_name):
         '''Constructor for Class.  Sets up fabric environment.
@@ -196,6 +200,51 @@ class ObaRvtdFab:
         # stop servers immediately
         run('set -m; /home/{0}/tomcat/bin/shutdown.sh'.format(self.user))
         sudo('set -m; /usr/local/xwiki/stop_xwiki.sh -p 8081')
+        
+    def install_watchdog(self):
+        '''Configures and uploads watchdog script.  Adds cron task to run it.
+        '''
+        
+        # ensure watchdog config exists by retrieving it
+        get_watchdog_config()
+        
+        # ensure watchdog .py file is in config directory
+        oba_script_file = os.path.join(CONFIG_DIR, 'check_oba.py')
+        if not os.path.exists(oba_script_file):
+            print('Watchdog python script does not exist in config directory.')
+            print('Please create it and set the appropriate location of the watchdog.ini file.')
+            return
+        
+        # ensure script and config folder exists
+        if not exists(self.config_dir):
+            run('mkdir {0}'.format(self.config_dir))
+            
+        if not exists(self.script_dir):
+            run('mkdir {0}'.format(self.script_dir))
+            
+        # upload watchdog script (remove it if needed)
+        remote_script_file = unix_path_join(self.script_dir, 'check_oba.py')
+        if exists(remote_script_file):
+            sudo('rm -rf {0}'.format(remote_script_file))
+            
+        put(oba_script_file, self.script_dir)
+        
+        # upload watchdog config (remove it if needed)
+        remote_config_file = unix_path_join(self.config_dir, 'watchdog.ini')
+        if exists(remote_config_file):
+            sudo('rm -rf {0}'.format(remote_config_file))
+            
+        put(os.path.join(CONFIG_DIR, 'watchdog.ini'), self.config_dir)
+        
+        # update/insert cron to run script
+        with open(os.path.join(CONFIG_TEMPLATE_DIR, 'watchdog_crontab')) as f:
+            refresh_cron_template = f.read()
+            
+        cron_settings = dict(cron_email=self.aws_conf.get('DEFAULT', 'cron_email'),
+                             watchdog_script=remote_script_file)
+        cron = refresh_cron_template.format(**cron_settings)
+            
+        crontab_update(cron, 'watchdog_cron')        
                     
 
 def install(instance_dns_name=None):
@@ -261,3 +310,17 @@ def copy_gwt(instance_dns_name=None):
         instance_dns_name (string, default=None): The EC2 instance to deploy to.
     '''
     pass
+
+
+def install_watchdog(instance_dns_name=None):
+    '''Installs OBA on the EC2 instance.
+    
+    Args:
+        instance_dns_name (string, default=None): The EC2 instance to deploy to.
+    '''
+    
+    if not instance_dns_name:
+        instance_dns_name = input('Enter EC2 public dns name: ')
+        
+    oba_fab = ObaRvtdFab(instance_dns_name)
+    oba_fab.install_watchdog()

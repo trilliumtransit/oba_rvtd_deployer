@@ -2,7 +2,8 @@ import sys
 
 from oba_rvtd_deployer.aws import launch_new, tear_down
 from oba_rvtd_deployer.gtfs import validate_gtfs, update
-from oba_rvtd_deployer.oba import install, deploy, start, copy_gwt
+from oba_rvtd_deployer.oba import install, deploy, start, copy_gwt,\
+    install_watchdog
 
 
 def run_all():
@@ -33,5 +34,8 @@ def run_all():
 
     # move GWT files to production webapp dir
     copy_gwt(public_dns_name)
+    
+    # install watchdog python script
+    install_watchdog(public_dns_name)
     
     print('Deployment of new server has finished.  Please follow steps: OneBusAway Setup and xWiki Setup')

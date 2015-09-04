@@ -13,8 +13,10 @@ Script(s) to deploy and manage OneBusAway on Amazon EC2 for Rogue Valley Transpo
 * [Running Scripts](#running-scripts)
 * [Disabling IPv6](#disabling-ipv6)
 * [PostgreSQL Setup](#ec2-postgresql-setup)
+* [Watchdog Setup](#watchdog-setup)
 * [OneBusAway Setup](#onebusaway-setup)
 * [xWiki Setup](#xwiki-setup)
+* [EC2 Instance Notes](#ec2-instance-notes)
 
 ## Installation
 
@@ -66,6 +68,7 @@ You'll need to create a bunch of config files before running the deployment scri
 | instance_type | The EC2 instance type.  [(See instance types)](http://aws.amazon.com/ec2/pricing/). |
 | region | The AWS region to connect to. |
 | security_groups | Security groups to grant to the instance.  If more than one, seperate with commas. |
+| timezone | The linux timezone to set the machine to.  Use a path on the machine such as `/usr/share/zoneinfo/America/Los_Angeles`. |
 | user | The user to login as when connecting via ssh.  Defaults to `ec2-user`. |
 | volume_size | Size of the AWS Volume for the new instance in GB.  Defaults to `12`. | 
 
@@ -155,6 +158,10 @@ There is some manual setup required for setting up PostgreSQL.
     ```
 9.  Restart postgresql: `sudo service postgresql restart`
 
+## Watchdog Setup
+
+Just before the master deployment script finishes, it will install OneBusAway Watchdog on the instance.  If you haven't configured the watchdog.ini file, the script will help you build the config file.  Also, you'll need to copy over the check_oba.py script to the config folder and change the path to the watchdog config file on the instance.  Usually this should be `/home/ec2-user/config/watchdog.ini`.  To see a full list of config params, see [this list](https://github.com/djstroky/onebusaway-watchdog-rvtd#setup).
+
 ## OneBusAway Setup
 
 After installing OneBusAway, the webapp will need to be configured manually.  Get the public dns name of the instance and add to the url so you get `ec2-###-###-###-###.us-west-2.compute.amazonaws.com:8080/onebusaway-webapp`.  Upon starting, you'll be prompted to add an admin account.
@@ -177,3 +184,36 @@ After installing and starting xWiki for the first time, it will be blank.  It is
 12.  Stop xWiki server using command `sudo /usr/local/xwiki/stop_xwiki.sh -p 8081`.
 13.  Edit the file `/usr/local/xwiki/webapps/xwiki/WEB-INF/xwiki.cfg` and comment out the superadmin line.
 14.  Start xWiki server using command `sudo nohup /usr/local/xwiki/start_xwiki.sh -p 8081 > /dev/null &`.
+
+## EC2 Instance Notes
+
+Here is a complete list of stuff that this script install/does on the instance:
+
+* Launches a new EC2 instance
+* Disables IPV6 (manual operation).
+* Installs Postgresql (partially automated).
+* Updates system using `yum update`.
+* Changes the timezone of the machine.
+* Installs [AWS Cloudwatch Monitoring Scripts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts-perl.html). (starts via cron)
+* Installs git
+* Installs java-1.7.0-openjdk and java-1.7.0-openjdk-devel
+* Installs maven (to /usr/local/)
+* Installs tomcat 
+  - to /home/{user}/tomcat/
+  - Adds a startup script to start tomcat on reboot
+* Installs xWiki
+  - to /usr/local/xwiki
+  - Adds a startup script to start xwiki on reboot
+  - This process downloads a 700mb package, so it may take a while.
+* Clones [onebusaway-application-modules-rvtd](https://github.com/trilliumtransit/onebusaway-application-modules-rvtd)
+* Builds the following webapps from source using maven:
+  - onebusaway-transit-data-federation-webapp
+  - onebusaway-api-webapp
+  - onebusaway-webapp
+  - onebusaway-sms-webapp
+* Builds a bundle.
+* Sets a cron to automatically update the bundle and restart Tomcat nightly at 3am server time.
+* Copies compiled .war files for each of the webapps into Tomcat for it to run.  
+* Starts tomcat
+* Starts xWiki
+* Installs [onebusaway-watchdog-rvtd](https://github.com/djstroky/onebusaway-watchdog-rvtd) (runs via cron)

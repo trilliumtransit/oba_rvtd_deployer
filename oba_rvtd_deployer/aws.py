@@ -84,7 +84,6 @@ def launch_new():
     # If we've reached this point, the instance is up and running.
     print('SSH working')
     aws_system.set_timezone()
-    return
     aws_system.turn_off_ipv6()
     aws_system.install_pg()
     aws_system.update_system()

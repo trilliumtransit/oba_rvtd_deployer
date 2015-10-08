@@ -114,7 +114,9 @@ class GtfsFab:
                                 gtfs_dl_logfile=unix_path_join(self.data_dir, 'nightly_dl.out'),
                                 federation_builder_folder=self.federation_builder_folder,
                                 bundle_dir=self.bundle_dir,
-                                user=self.user)
+                                user=self.user,
+                                cron_email=self.aws_conf.get('DEFAULT', 'cron_email'),
+                                from_mailer=env.host_string)
         
         # check if script folders exists
         if not exists(self.script_dir):

@@ -140,8 +140,8 @@ After installing and starting xWiki for the first time, it will be blank.  It is
 Here is a complete list of stuff that this script install/does on the instance:
 
 * Launches a new EC2 instance
-* Disables IPV6 (manual operation).
-* Installs Postgresql (partially automated).
+* Disables IPV6.
+* Installs Postgresql.
 * Updates system using `yum update`.
 * Changes the timezone of the machine.
 * Installs [AWS Cloudwatch Monitoring Scripts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts-perl.html). (starts via cron)

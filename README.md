@@ -11,8 +11,6 @@ Script(s) to deploy and manage OneBusAway on Amazon EC2 for Rogue Valley Transpo
     * [gtfs.ini](#gtfsini)
     * [oba.ini](#obaini)
 * [Running Scripts](#running-scripts)
-* [Disabling IPv6](#disabling-ipv6)
-* [PostgreSQL Setup](#ec2-postgresql-setup)
 * [Watchdog Setup](#watchdog-setup)
 * [OneBusAway Setup](#onebusaway-setup)
 * [xWiki Setup](#xwiki-setup)
@@ -109,54 +107,6 @@ If using linux, the executable files to run scripts will be in the `bin` folder 
 | start_oba | Starts Tomcat and xWiki Servers. |
 | stop_oba | Stops Tomcat and xWiki Servers. |
 | deploy_master | Combines following scripts in order: launch_new_ec2, install_oba, update_gtfs, deploy_oba, start_oba.  Be sure to manually setup OneBusAway and xWiki after the server is ready. |
-
-## Disabling IPv6
-
-Some webapps try to serve themselves using IPv6, so IPv6 is disabled on the machine.  This must be done manually.  Follow these steps to disable IPv6:
-
-1.  `sudo su`
-2.  `echo "net.ipv6.conf.default.disable_ipv6=1" >> /etc/sysctl.conf`
-3.  `echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf`
-4.  `sysctl -p`
-
-## EC2 PostgreSQL Setup
-
-There is some manual setup required for setting up PostgreSQL.
-
-0.  Change to root user:  `sudo su`.
-1.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change this line:
-    ```
-    local   all         all                                       peer
-    ```
-
-    to this:
-
-    ```
-    local   all         all                                       trust
-    ```
-
-2.  Start postgresql: `sudo service postgresql start`
-3.  Enter into the psql edit mode:  `psql -U postgres`
-3.  Create a login user for OneBusAway (replace username with your choice): `CREATE USER username1 PASSWORD 'password';`
-4.  Create a group role for that user (replace group role name with your choice): `CREATE ROLE groupname1;`
-5.  Grant group role to login user (replace names): `GRANT groupname1 TO username1;`
-6.  Create the databases (KEEP db names!): `CREATE DATABASE org_onebusaway_users ENCODING = 'UTF8';` `CREATE DATABASE org_onebusaway_database ENCODING = 'UTF8';`
-7.  Grant all on the databases to group role (replace group role name): `GRANT ALL ON DATABASE org_onebusaway_users TO groupname1;` `GRANT ALL ON DATABASE org_onebusaway_database TO groupname1;`
-8.  Edit the file `/var/lib/pgsql9/data/pg_hba.conf`.  Change these lines:
-    ```
-    local   all             all                                     trust
-    # IPv4 local connections:
-    host    all             all             127.0.0.1/32            ident
-    ```
-
-    to this:
-
-    ```
-    local   all             all                                     md5
-    # IPv4 local connections:
-    host    all             all             127.0.0.1/32            md5
-    ```
-9.  Restart postgresql: `sudo service postgresql restart`
 
 ## Watchdog Setup
 

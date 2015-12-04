@@ -8,12 +8,14 @@ import time
 
 import boto.ec2
 from fabric.api import env, run, sudo, cd, put
+from fabric.context_managers import settings
+from fabric.contrib.files import exists
 from fabric.exceptions import NetworkError
 
 from oba_rvtd_deployer import REPORTS_DIR, CONFIG_TEMPLATE_DIR
-from oba_rvtd_deployer.config import get_aws_config
+from oba_rvtd_deployer.config import get_aws_config, get_oba_config
 from oba_rvtd_deployer.fab_crontab import crontab_update
-from oba_rvtd_deployer.util import FabLogger, write_template
+from oba_rvtd_deployer.util import FabLogger, write_template, unix_path_join
 
 
 def get_aws_connection():
@@ -95,7 +97,9 @@ def launch_new():
 class AwsFab:
     
     aws_conf = get_aws_config()
+    oba_conf = get_oba_config()
     user = aws_conf.get('DEFAULT', 'user')
+    config_dir = unix_path_join('/home', user, 'conf')
     
     def __init__(self, host_name):
         '''Constructor for Class.  Sets up fabric environment.
@@ -144,13 +148,10 @@ class AwsFab:
         '''
         
         # unfortunately, this requires sudo access
-        print('Please ssh as root onto the machine and follow the instructions in the section "Disabling IPv6".')
-        input('Press enter to continue...')
-        # run('sudo su')
-        # run('echo "net.ipv6.conf.default.disable_ipv6=1" >> /etc/sysctl.conf')
-        # run('echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf')
-        # run('sysctl -p')
-        # run('exit')
+        with settings(warn_only=True):
+            sudo('echo "net.ipv6.conf.default.disable_ipv6=1" >> /etc/sysctl.conf')
+            sudo('echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf')
+            sudo('sysctl -p')
     
     def install_all(self, exclude_pg=True):
         '''Method to install all stuff on machine (except OneBusAway).
@@ -235,6 +236,28 @@ class AwsFab:
         # check that mvn command works
         run('/usr/local/maven/bin/mvn -version')
         
+    def upload_pg_hba_conf(self, local_method):
+        '''Overwrites pg_hba.conf with specified local method.
+        '''
+        
+        remote_data_folder = '/var/lib/pgsql9/data'
+        remote_pg_hba_conf = '/var/lib/pgsql9/data/pg_hba.conf'
+        
+        sudo('rm -rf {0}'.format(remote_pg_hba_conf))
+        
+        if not exists(self.config_dir):
+            run('mkdir {0}'.format(self.config_dir))
+        
+        put(write_template(dict(local_method=local_method), 'pg_hba.conf'),
+            self.config_dir)
+        
+        sudo('mv {0} {1}'.format(unix_path_join(self.config_dir, 'pg_hba.conf'),
+                                 remote_data_folder))
+        
+        sudo('chmod 600 {0}'.format(remote_pg_hba_conf))
+        sudo('chgrp postgres {0}'.format(remote_pg_hba_conf))
+        sudo('chown postgres {0}'.format(remote_pg_hba_conf))
+        
     def install_pg(self):
         '''Configures PostgreSQL for immediate use by OneBusAway.
         '''
@@ -245,9 +268,32 @@ class AwsFab:
         # initialize db
         sudo('service postgresql initdb')
         
-        # manually edit pg_hba.conf
-        print('Please ssh as root onto the machine and follow the instructions in the section "EC2 PostgreSQL Setup".')
-        input('Press enter to continue...')
+        # edit pg_hba for db initialization
+        self.upload_pg_hba_conf('trust')
+        
+        # start postgersql server
+        sudo('service postgresql start')
+        
+        # run init sql
+        db_setup_dict = dict(pg_username=self.oba_conf.get('DEFAULT', 'pg_username'),
+                             pg_password=self.oba_conf.get('DEFAULT', 'pg_password'),
+                             pg_role=self.oba_conf.get('DEFAULT', 'pg_role'))
+        
+        if not exists(self.config_dir):
+            run('mkdir {0}'.format(self.config_dir))
+        
+        put(write_template(db_setup_dict, 'init.sql'), self.config_dir)
+        
+        init_sql_filename = unix_path_join(self.config_dir, 'init.sql')
+        sudo('psql -U postgres -f {0}'.format(init_sql_filename))
+        
+        sudo('rm -rf {0}'.format(init_sql_filename))
+        
+        # switch to more secure pg_hba.conf
+        self.upload_pg_hba_conf('md5')
+        
+        # start postgersql server
+        sudo('service postgresql restart')
         
         # start postgresql on boot
         sudo('chkconfig postgresql on')
@@ -260,12 +306,12 @@ class AwsFab:
         '''
         
         # get tomcat from direct download
-        run('wget http://apache.mirrors.ionfish.org/tomcat/tomcat-7/v7.0.64/bin/apache-tomcat-7.0.64.tar.gz')
+        run('wget http://mirror.cc.columbia.edu/pub/software/apache/tomcat/tomcat-7/v7.0.65/bin/apache-tomcat-7.0.65.tar.gz')
         
         # move to a local area for better organization
-        run('tar xzf apache-tomcat-7.0.64.tar.gz')
-        run('rm -rf apache-tomcat-7.0.64.tar.gz')
-        run('mv apache-tomcat-7.0.64 tomcat')
+        run('tar xzf apache-tomcat-7.0.65.tar.gz')
+        run('rm -rf apache-tomcat-7.0.65.tar.gz')
+        run('mv apache-tomcat-7.0.65 tomcat')
                     
         # add logging rotation for catalina.out
         put(write_template(dict(user=self.user), 'tomcat_catalina_out'), '/etc/logrotate.d', True)
@@ -281,14 +327,14 @@ class AwsFab:
             
     def install_xwiki(self):
         
-        run('wget http://download.forge.ow2.org/xwiki/xwiki-enterprise-jetty-hsqldb-7.1.1.zip')
+        run('wget http://download.forge.ow2.org/xwiki/xwiki-enterprise-jetty-hsqldb-7.3.zip')
         
         # move to a local area for better organization
-        sudo('unzip xwiki-enterprise-jetty-hsqldb-7.1.1.zip -d /usr/local')
-        run('rm xwiki-enterprise-jetty-hsqldb-7.1.1.zip')
+        sudo('unzip xwiki-enterprise-jetty-hsqldb-7.3.zip -d /usr/local')
+        run('rm xwiki-enterprise-jetty-hsqldb-7.3.zip')
         
         with cd('/usr/local'):
-            sudo('ln -s xwiki-enterprise-jetty-hsqldb-7.1.1 xwiki')
+            sudo('ln -s xwiki-enterprise-jetty-hsqldb-7.3 xwiki')
             
         # add init.d script
         put(os.path.join(CONFIG_TEMPLATE_DIR, 'xwiki_init.d'), '/etc/init.d', True)

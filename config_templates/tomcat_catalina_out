@@ -1,8 +1,8 @@
-/home/{user}/tomcat/logs/catalina.out {{
+/home/{user}/tomcat/logs/catalina.out {
  copytruncate
  daily
- rotate 7
+ rotate 3
  compress
  missingok
  size 5M
-}}
+}
